@@ -1,0 +1,51 @@
+{{define "title"}}People{{end}}
+
+{{define "main"}}
+
+    <!-- Main Content Area -->
+    <main class="py-4 py-lg-5 flex-grow-1">
+        
+                <!-- COLUMN 2: Results Area -->
+                <div class="col-lg-12">
+                    <div class="d-flex justify-content-between align-items-end border-bottom border-subtle pb-3 mb-4">
+                        <div>
+                            <h3 class="fw-bold mb-1">People</h3>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="small text-muted text-nowrap">Sort by:</label>
+                            <select class="form-select form-select-sm bg-light border-0 shadow-none" style="width: auto;" onchange="window.location.href='?sort='+this.value">
+                                <option value="popularity" {{if or (eq .Sort "popularity") (eq .Sort "")}}selected{{end}}>Popularity</option>
+                                <option value="name" {{if eq .Sort "name"}}selected{{end}}>Name</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Grid Results -->
+                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-3 g-4 mb-5">
+                        
+                        <!-- People will go here -->
+
+                        {{range .People}}
+                        <!-- Person Result -->
+                        <div class="col">
+                            <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative bg-light border">
+                                    <div class="media-poster-container rounded-circle mx-auto mt-4 mb-2 shadow-sm" style="width: 140px; height: 140px; aspect-ratio: 1/1;">
+                                        <img src="{{if .Image}}{{.Image}}{{else}}https://ui-avatars.com/api/?name={{.Name}}{{end}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                                    </div>
+                                    <div class="p-3 text-center">
+                                        <h6 class="fw-bold text-dark mb-1">{{.Name}}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+
+                    </div>
+                </div>
+
+                    </div>
+                </div>
+    </main>
+
+{{end}}

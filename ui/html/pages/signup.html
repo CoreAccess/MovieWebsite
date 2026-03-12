@@ -1,0 +1,78 @@
+{{define "title"}}Sign Up{{end}}
+
+{{define "main"}}
+<div class="row">
+    <!-- CENTER COLUMN: Sign Up Form -->
+    <div class="col-lg-7 pb-5">
+                <div class="bg-dark text-white rounded-1 mb-4 position-relative overflow-hidden shadow-sm border border-subtle">
+                    <!-- Subtle gradient overlay -->
+                    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: radial-gradient(circle at top right, rgba(225, 29, 72, 0.15), transparent 60%);"></div>
+                    
+                    <div class="position-relative z-1 p-4 p-lg-5">
+                        <h3 class="display-6 fw-bold mb-4 text-white text-center" style="letter-spacing: -1px;">Create Account</h3>
+                        <p class="text-center text-white-50 mb-4">Join StreamLine to start tracking your favorite movies and TV shows!</p>
+                        
+                        <form action="/signup" method="POST" class="mx-auto" style="max-width: 400px;">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                            
+                            <div class="mb-3">
+                                <label for="username" class="form-label text-light fw-medium small">Username</label>
+                                <input type="text" class="form-control form-control-lg bg-dark text-light border-secondary shadow-sm" id="username" name="username" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="email" class="form-label text-light fw-medium small">Email address</label>
+                                <input type="email" class="form-control form-control-lg bg-dark text-light border-secondary shadow-sm" id="email" name="email" required>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label text-light fw-medium small">Password</label>
+                                <input type="password" class="form-control form-control-lg bg-dark text-light border-secondary shadow-sm" id="password" name="password" required>
+                            </div>
+                            
+                            <div class="d-grid mb-4 mt-4">
+                                <button type="submit" class="btn btn-primary-accent btn-lg rounded-1 shadow-sm fw-bold">Sign Up</button>
+                            </div>
+                            
+                            <div class="text-center">
+                                <span class="text-white-50 small">Already have an account?</span> 
+                                <a href="/login" class="text-decoration-none text-primary-accent fw-bold small ms-1 hover-lift transition-fast">Log in</a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT COLUMN: Features -->
+            <div class="col-lg-3 d-none d-lg-block">
+                <div>
+                    <!-- Features Highlights -->
+                    <div class="card border-0 shadow-sm rounded-1 mb-4 border-top border-primary-accent" style="border-top-width: 4px !important;">
+                        <div class="card-body p-4 text-center">
+                             <h6 class="fw-bold mb-3 text-dark">Why Join StreamLine?</h6>
+                             <div class="d-flex flex-column gap-3 mt-4">
+                                <div class="text-center">
+                                    <i class="bi bi-bookmark-fill fs-3 text-primary-accent mb-2 d-block"></i>
+                                    <h6 class="fw-bold text-dark mb-1">Watchlists</h6>
+                                    <p class="small text-muted mb-0 lh-sm">Never forget what you want to watch next.</p>
+                                </div>
+                                <hr class="text-muted opacity-25 my-1">
+                                <div class="text-center">
+                                    <i class="bi bi-chat-quote-fill fs-3 text-merch mb-2 d-block"></i>
+                                    <h6 class="fw-bold text-dark mb-1">Reviews</h6>
+                                    <p class="small text-muted mb-0 lh-sm">Share your thoughts with other movie buffs.</p>
+                                </div>
+                                <hr class="text-muted opacity-25 my-1">
+                                <div class="text-center">
+                                    <i class="bi bi-stars fs-3 text-warning mb-2 d-block"></i>
+                                    <h6 class="fw-bold text-dark mb-1">Discover</h6>
+                                    <p class="small text-muted mb-0 lh-sm">Find emerging hits and classic recommendations.</p>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+</div>
+{{end}}

@@ -1,0 +1,134 @@
+{{define "title"}}Person Details{{end}}
+
+{{define "head"}}
+    <style>
+        .hover-bg-light:hover { background-color: var(--bg-main); cursor: pointer; }
+        .transition-fast { transition: background-color var(--transition-fast); }
+    </style>
+{{end}}
+
+{{define "main"}}
+    <div class="col-lg-12">
+                <main>
+                    <div class="row gx-5">
+                        
+                        <!-- Left Sidebar (Photo & Personal Info) -->
+                        <div class="col-lg-3 col-md-4 mb-5 mb-md-0">
+                    <div class="media-poster-container shadow-lg mb-4" style="aspect-ratio: 2/3; border-radius: 4px;">
+                        <img src="{{.PersonDetail.Person.Image}}" alt="{{.PersonDetail.Person.Name}}" class="w-100 h-100 object-fit-cover">
+                    </div>
+
+                    <h5 class="fw-bold text-dark mb-3">Personal Info</h5>
+                    
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Known For</strong>
+                        <span class="text-muted small">Acting</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Born</strong>
+                        <span class="text-muted small">{{.PersonDetail.Person.BirthDate}}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Place of Birth</strong>
+                        <span class="text-muted small">{{if .PersonDetail.Person.BirthPlace}}{{.PersonDetail.Person.BirthPlace}}{{else}}Unknown{{end}}</span>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Also Known As</strong>
+                        <span class="text-muted small">{{if .PersonDetail.Person.AlsoKnownAs}}{{.PersonDetail.Person.AlsoKnownAs}}{{else}}-{{end}}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Awards</strong>
+                        <span class="text-muted small">{{if .PersonDetail.Person.Awards}}{{.PersonDetail.Person.Awards}}{{else}}No major awards listed.{{end}}</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <strong class="text-body d-block small">Speaks</strong>
+                        <span class="text-muted small">{{if .PersonDetail.Person.KnowsLanguage}}{{.PersonDetail.Person.KnowsLanguage}}{{else}}Unknown{{end}}</span>
+                    </div>
+                </div>
+
+                <!-- Right Main Content -->
+                <div class="col-lg-9 col-md-8">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom border-subtle pb-3 mb-4">
+                        <div class="d-flex align-items-center gap-3">
+                            <h1 class="display-5 fw-black text-dark mb-0" style="letter-spacing: -1px;">{{.PersonDetail.Person.Name}}</h1>
+                            {{if $.AuthenticatedUser}}
+                                <a href="/wiki/edit?type=person&id={{.PersonDetail.Person.ID}}" class="btn btn-sm btn-outline-dark fw-bold rounded-1 ms-2" title="Suggest an edit to this page"><i class="bi bi-pencil-square me-1"></i> Edit</a>
+                            {{end}}
+                        </div>
+                        <div class="d-flex align-items-center gap-4 mt-3 mt-md-0">
+                        </div>
+                    </div>
+                    
+                    <h5 class="fw-bold text-dark mb-2">Biography</h5>
+                    <p class="text-body mb-5" style="font-size: 1.05rem; line-height: 1.6;">
+                        {{if .PersonDetail.Person.Description}}{{.PersonDetail.Person.Description}}{{else}}No biography available.{{end}}
+                    </p>
+
+                    <!-- Known For Grid -->
+                    <h5 class="fw-bold text-dark mb-3">Known For</h5>
+                    
+                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-4 flex-nowrap overflow-auto custom-scrollbar pb-3 mb-5">
+                        {{range $index, $movie := .PersonDetail.Movies}}
+                        {{if lt $index 5}}
+                        <div class="col">
+                            <a href="/movies/{{$movie.ID}}/{{$movie.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100">
+                                    <div class="media-poster-container">
+                                        {{if $movie.Image}}
+                                        <img src="{{$movie.Image}}" alt="{{$movie.Name}}" class="media-poster" style="object-fit: cover;">
+                                        {{else}}
+                                        <div class="bg-light h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-film fs-1"></i></div>
+                                        {{end}}
+                                    </div>
+                                    <div class="p-3 bg-white text-center">
+                                        <h6 class="fw-bold text-dark text-truncate mb-0">{{$movie.Name}}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+                        {{end}}
+                        
+                        {{if not .PersonDetail.Movies}}
+                        <div class="col-12"><p class="text-muted small">No known movies.</p></div>
+                        {{end}}
+                    </div>
+
+                    <!-- Acting Credits List -->
+                    <h5 class="fw-bold text-dark mb-3">Credits</h5>
+                    <div class="bg-white rounded-1 shadow-sm border border-subtle overflow-hidden">
+                        
+                        {{range .PersonDetail.Movies}}
+                        <div class="d-flex p-3 border-bottom border-subtle align-items-center hover-bg-light transition-fast">
+                            <div class="text-center w-auto me-4 fw-medium text-dark" style="min-width: 50px;">{{if .DatePublished}}{{printf "%.4s" .DatePublished}}{{else}}-{{end}}</div>
+                            <div class="flex-grow-1">
+                                <a href="/movies/{{.ID}}/{{.Slug}}" class="fw-bold text-dark text-decoration-none hover-primary">{{.Name}}</a>
+                                <span class="d-block text-muted small">Movie</span>
+                            </div>
+                        </div>
+                        {{end}}
+
+                        {{range .PersonDetail.Shows}}
+                        <div class="d-flex p-3 border-bottom border-subtle align-items-center hover-bg-light transition-fast">
+                            <div class="text-center w-auto me-4 fw-medium text-dark" style="min-width: 50px;">{{if .StartDate}}{{printf "%.4s" .StartDate}}{{else}}-{{end}}</div>
+                            <div class="flex-grow-1">
+                                <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="fw-bold text-dark text-decoration-none hover-primary">{{.Name}}</a>
+                                <span class="d-block text-muted small">TV Series</span>
+                            </div>
+                        </div>
+                        {{end}}
+                        
+                        {{if and (not .PersonDetail.Movies) (not .PersonDetail.Shows)}}
+                        <div class="p-3 text-muted small">No credits available.</div>
+                        {{end}}
+                    </div>
+                </div>
+                    </div>
+                </main>
+            </div>
+{{end}}

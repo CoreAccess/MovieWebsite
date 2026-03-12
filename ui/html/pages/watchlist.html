@@ -1,0 +1,104 @@
+{{define "title"}}My Watchlist{{end}}
+
+{{define "main"}}
+
+    <!-- Main Content Area -->
+    <main class="py-4 py-lg-5 flex-grow-1">
+        
+        
+        
+        
+                <!-- COLUMN 2: Results Area -->
+                <div class="col-lg-12">
+                    <div class="d-flex justify-content-between align-items-end border-bottom border-subtle pb-3 mb-4">
+                        <div>
+                            <h3 class="fw-bold mb-1">My Watchlist</h3>
+                            <p class="text-muted small mb-0">Titles you've saved to watch later.</p>
+                        </div>
+                    </div>
+
+                    {{if and (not .Movies) (not .Shows)}}
+                    <!-- Empty State -->
+                    <div class="text-center py-5">
+                        <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle mb-4" style="width: 100px; height: 100px;">
+                            <i class="bi bi-bookmark-plus text-muted" style="font-size: 3rem;"></i>
+                        </div>
+                        <h4 class="fw-bold mb-3">Your Watchlist is Empty</h4>
+                        <p class="text-muted mb-4 mx-auto" style="max-width: 500px;">
+                            You haven't saved any movies or TV shows yet. Browse our library to find titles you want to watch later!
+                        </p>
+                        <div class="d-flex justify-content-center gap-3">
+                            <a href="/movies" class="btn btn-primary fw-bold px-4 py-2">Browse Movies</a>
+                            <a href="/tv-shows" class="btn btn-outline-dark fw-bold px-4 py-2">Browse TV Shows</a>
+                        </div>
+                    </div>
+                    {{else}}
+
+                    <!-- Populated State: Movies -->
+                    {{if .Movies}}
+                    <h5 class="fw-bold mb-3 mt-2">Movies</h5>
+                    <div class="row row-cols-2 row-cols-lg-4 row-cols-xl-6 row-cols-xxl-8 g-4 mb-5">
+                        {{range .Movies}}
+                        <!-- Movie Result -->
+                        <div class="col">
+                            <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative">
+                                    <div class="media-poster-container shadow-sm">
+                                        {{if .Image}}
+                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster">
+                                        {{else}}
+                                        <div class="bg-light h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-film fs-1"></i></div>
+                                        {{end}}
+                                    </div>
+                                    <div class="p-2 p-xl-3 text-center">
+                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <i class="bi bi-star-fill text-warning" style="font-size: 0.8rem;"></i>
+                                            <span class="small fw-bold text-dark">{{if .AggregateRating}}{{printf "%.1f" .AggregateRating}}{{else}}-{{end}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+
+                    <!-- Populated State: TV Shows -->
+                    {{if .Shows}}
+                    <h5 class="fw-bold mb-3">TV Shows</h5>
+                    <div class="row row-cols-2 row-cols-lg-4 row-cols-xl-6 row-cols-xxl-8 g-4 mb-5">
+                        {{range .Shows}}
+                        <!-- Show Result -->
+                        <div class="col">
+                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative">
+                                    <div class="media-poster-container shadow-sm">
+                                        {{if .Image}}
+                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster">
+                                        {{else}}
+                                        <div class="bg-light h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-tv fs-1"></i></div>
+                                        {{end}}
+                                    </div>
+                                    <div class="p-2 p-xl-3 text-center">
+                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
+                                        <div class="d-flex align-items-center justify-content-center gap-1">
+                                            <i class="bi bi-star-fill text-warning" style="font-size: 0.8rem;"></i>
+                                            <span class="small fw-bold text-dark">{{if .AggregateRating}}{{printf "%.1f" .AggregateRating}}{{else}}-{{end}}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+                    </div>
+                    {{end}}
+
+                    {{end}} <!-- End Populated State Branch -->
+
+                </div>
+            
+        
+    </main>
+
+{{end}}

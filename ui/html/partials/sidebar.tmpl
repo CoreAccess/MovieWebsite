@@ -1,0 +1,52 @@
+{{define "sidebar"}}
+<!-- Sidebar: offcanvas on mobile/tablet, static column on lg+ -->
+<div class="offcanvas offcanvas-start offcanvas-lg" tabindex="-1" id="sidebarMenu" aria-labelledby="sidebarMenuLabel">
+    <!-- Offcanvas header — only visible when it's a drawer (mobile/tablet) -->
+    <div class="offcanvas-header d-lg-none border-bottom border-subtle">
+        <a class="d-flex align-items-center fw-bold fs-5 text-primary-accent text-decoration-none" href="/" id="sidebarMenuLabel">
+            <i class="bi bi-play-circle-fill me-2 fs-4 text-primary-accent"></i>
+            StreamLine
+        </a>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebarMenu" aria-label="Close"></button>
+    </div>
+
+    <!-- The actual nav links -->
+    <div class="offcanvas-body d-flex flex-column pt-3 pb-4 sidebar-nav-desktop p-lg-0 pt-lg-3" style="overflow-y: auto;">
+        <nav aria-label="Main Sidebar">
+            <a href="/" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-house-door-fill me-3 fs-5 align-middle"></i> Home Feed
+            </a>
+            <a href="/movies" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-film me-3 fs-5 align-middle"></i> Movies
+            </a>
+            <a href="/tv-shows" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-tv me-3 fs-5 align-middle"></i> TV Shows
+            </a>
+            <a href="/people" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-people me-3 fs-5 align-middle"></i> People
+            </a>
+
+            <h6 class="px-3 text-muted small fw-bold text-uppercase mt-3 mb-2">My Account</h6>
+            <a href="/my-feed" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-person-lines-fill me-3 fs-5 align-middle"></i> My Feed
+            </a>
+            <a href="/profile" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-person-circle me-3 fs-5 align-middle"></i> My Profile
+            </a>
+            <a href="/watchlist" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-bookmark me-3 fs-5 align-middle"></i> Watchlist
+            </a>
+
+            <hr class="text-muted opacity-25 my-2">
+
+            <h6 class="px-3 text-muted small fw-bold text-uppercase mt-2 mb-2">Engage</h6>
+            <a href="/search" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-controller me-3 fs-5 align-middle"></i> Games &amp; Trivia
+            </a>
+            <a href="/search" class="nav-link text-body hover-primary rounded-1 px-3 py-2 mb-1 fw-medium">
+                <i class="bi bi-trophy me-3 fs-5 align-middle"></i> Leaderboard
+            </a>
+        </nav>
+    </div>
+</div>
+{{end}}

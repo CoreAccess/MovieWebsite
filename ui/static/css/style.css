@@ -1,0 +1,572 @@
+/* 
+  StreamLine UI Design System
+  Light Theme Variables & Utilities
+*/
+
+:root {
+  /* Elegant Light Theme Colors */
+  --bg-main: #FAFAFA;          /* Very light gray/off-white background */
+  --bg-surface: #FFFFFF;       /* Pure white for cards and surface elements */
+  
+  /* Primary Action Color - Traditional High Contrast Blue */
+  --color-primary: #0d6efd;    
+  --color-primary-hover: #0b5ed7;
+  --color-primary-light: #cfe2ff; /* For subtle primary backgrounds */
+  
+  /* Merchandise Action Color - Vibrant Rose/Coral (To pop against the primary color) */
+  --color-merch: #E11D48;
+  --color-merch-hover: #BE123C;
+  --color-merch-light: #FFE4E6;
+  
+  /* Text Accents */
+  --text-dark: #111827;        /* Almost black for major headings */
+  --text-body: #374151;        /* Dark gray for standard readability */
+  --text-muted: #6B7280;       /* Lighter gray for secondary text */
+  --footer-bg: #F3F4F6;        /* Slightly darker gray for footer separation */
+  --border-subtle: #E5E7EB;    /* Very light gray for dividers */
+  
+  /* Typography */
+  --font-family-base: 'Inter', system-ui, -apple-system, sans-serif;
+  
+  /* Transitions */
+  --transition-fast: 0.15s ease-in-out;
+  --transition-smooth: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.03);
+}
+
+/* ==========================================
+   Global Reset & Defaults
+   ========================================== */
+body {
+  font-family: var(--font-family-base);
+  background-color: var(--bg-main);
+  color: var(--text-body);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-dark);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* ==========================================
+   Typography Utilities
+   ========================================== */
+.text-dark { color: var(--text-dark) !important; }
+.text-body { color: var(--text-body) !important; }
+.text-muted { color: var(--text-muted) !important; }
+.text-primary-accent { color: var(--color-primary) !important; }
+.text-merch { color: var(--color-merch) !important; }
+
+/* ==========================================
+   Background Utilities
+   ========================================== */
+.bg-subtle-primary { background-color: var(--color-primary-light) !important; }
+.bg-subtle-merch { background-color: var(--color-merch-light) !important; }
+.bg-footer { background-color: var(--footer-bg); border-top: 1px solid var(--border-subtle); }
+
+/* ==========================================
+   Buttons and Form Controls
+   ========================================== */
+.btn-primary-accent {
+  background-color: var(--color-primary);
+  color: white;
+  border: none;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+.btn-primary-accent:hover, .btn-primary-accent:focus {
+  background-color: var(--color-primary-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-merch {
+  background-color: var(--color-merch);
+  color: white;
+  border: none;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+}
+.btn-merch:hover, .btn-merch:focus {
+  background-color: var(--color-merch-hover);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Search Bar Styling */
+.search-group {
+  border: 1px solid var(--border-subtle);
+  background-color: #F8F9FA;
+  transition: all var(--transition-fast);
+}
+.search-group:focus-within {
+  background-color: var(--bg-surface);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
+}
+
+/* ==========================================
+   Navbar Adjustments
+   ========================================== */
+.navbar {
+  border-bottom: 1px solid var(--border-subtle);
+  background-color: #ffffff !important;
+}
+.navbar-brand {
+  letter-spacing: -0.05em;
+}
+.nav-link {
+  color: var(--text-body) !important;
+  transition: color var(--transition-fast);
+}
+.nav-link:hover {
+  color: var(--color-primary) !important;
+}
+
+/* ==========================================
+   Footer Adjustments
+   ========================================== */
+.text-footer-muted { color: #6B7280; }
+.hover-primary { transition: color var(--transition-fast); }
+.hover-primary:hover { color: var(--color-primary) !important; }
+.hover-dark { transition: color var(--transition-fast); }
+.hover-dark:hover { color: var(--text-dark) !important; }
+.group-hover-primary { transition: color var(--transition-fast); }
+.group:hover .group-hover-primary { color: var(--color-primary) !important; }
+
+/* Trending List Ranking (Spruced Up) */
+.trending-list { counter-reset: trending; }
+.trending-item { 
+    counter-increment: trending;
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    transition: all var(--transition-fast);
+}
+
+.trending-item:hover {
+    background-color: var(--bg-surface);
+    transform: translateX(8px);
+}
+
+.trending-rank {
+    position: relative;
+    width: 2.5rem;
+}
+
+.trending-rank::before { 
+    content: counter(trending); 
+    font-size: 2.5rem;
+    font-weight: 900;
+    line-height: 1;
+    color: var(--text-dark);
+    opacity: 0.08;
+    position: absolute;
+    top: -0.5rem;
+    left: 0;
+    transition: opacity var(--transition-fast);
+}
+
+.trending-item:hover .trending-rank::before {
+    opacity: 0.15;
+    color: var(--color-primary);
+}
+
+.trending-indicator {
+    font-size: 0.7rem;
+    font-weight: 800;
+    color: var(--color-success);
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+/* Spotlight for #1 */
+.trending-item:first-child {
+    background: linear-gradient(to right, rgba(59, 130, 246, 0.05), transparent);
+    border-left: 3px solid var(--color-primary);
+}
+
+/* ==========================================
+   Media Cards & Micro Animations
+   ========================================== */
+.media-card {
+  border: none;
+  border-radius: 4px;
+  background: var(--bg-surface);
+  transition: all var(--transition-smooth);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+}
+
+.media-card:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow-hover);
+}
+
+.media-poster-container {
+  position: relative;
+  overflow: hidden;
+  border-radius: 4px 4px 0 0;
+  aspect-ratio: 2/3;
+  background-color: var(--bg-main); /* Placeholder empty state */
+}
+
+.media-poster {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.media-card:hover .media-poster {
+  transform: scale(1.05);
+}
+
+/* Ribbon / Slanted Corner Tag */
+.corner-ribbon {
+  position: absolute;
+  top: 12px;
+  right: -6px;
+  padding: 4px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: white;
+  background-color: var(--color-primary);
+  border-radius: 4px 0 0 4px;
+  box-shadow: -2px 2px 4px rgba(0,0,0,0.1);
+  z-index: 10;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* The small fold underneath */
+.corner-ribbon::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-top: 6px solid var(--color-primary-hover);
+  border-right: 6px solid transparent;
+}
+.corner-ribbon.tv {
+  background-color: #fd7e14; /* Vibrant Orange for TV */
+}
+.corner-ribbon.tv::after {
+  border-top-color: #e85e00; /* Darker orange for the shadow fold */
+}
+.corner-ribbon.movie {
+  background-color: var(--color-primary);
+}
+
+/* ==========================================
+   Custom Scrollbars & Specific Effects
+   ========================================== */
+.custom-scrollbar::-webkit-scrollbar {
+  height: 8px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: var(--bg-main); 
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--border-subtle); 
+  border-radius: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted); 
+}
+
+/* Hero Poster specific hover */
+.hero-poster {
+  transition: transform var(--transition-smooth);
+}
+.hero-block:hover .hero-poster {
+  transform: rotate(0deg) scale(1.02) !important;
+}
+
+/* ==========================================
+   Social Platform Specific Styles
+   ========================================== */
+
+/* Left Sidebar Navigation */
+.sidebar-nav .nav-link {
+  color: var(--text-body);
+  transition: all var(--transition-fast);
+  border: 1px solid transparent;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Shrink sidebar items slightly on medium/large desktops before the offcanvas breakpoint */
+@media (min-width: 992px) and (max-width: 1399px) {
+  .sidebar-nav .nav-link {
+    font-size: 0.85rem !important;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+  .sidebar-nav .nav-link i {
+    font-size: 1.1rem !important;
+    margin-right: 0.5rem !important;
+  }
+  #sidebarMenu h6 {
+    font-size: 0.7rem !important;
+    padding-left: 0.75rem !important;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+.sidebar-nav .nav-link:hover {
+  background-color: var(--bg-surface);
+  color: var(--color-primary) !important;
+  transform: translateX(4px);
+  border-color: var(--border-subtle);
+  box-shadow: var(--shadow-sm);
+}
+.sidebar-nav .nav-link.active {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary) !important;
+  font-weight: 700;
+  border-color: transparent;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Social Actions inside Post */
+.social-action {
+  transition: all var(--transition-fast) !important;
+}
+.social-action:hover {
+  transform: scale(1.1);
+}
+.hover-success:hover {
+  color: #198754 !important; /* Green for reshare */
+}
+.hover-merch:hover {
+  color: var(--color-merch) !important;
+  border-color: var(--color-merch) !important;
+}
+
+/* Gradients */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #3b82f6 100%);
+}
+.bg-gradient-dark-bottom {
+  background: linear-gradient(0deg, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, transparent 100%);
+}
+
+/* Shorts Card Zoom */
+.social-short-card {
+  transition: all var(--transition-smooth);
+}
+.social-short-card img {
+  transition: transform var(--transition-smooth);
+}
+.social-short-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md) !important;
+}
+.social-short-card:hover img {
+  transform: scale(1.08);
+}
+
+/* Overriding Background to Light grey for feed separation */
+.bg-main {
+  background-color: #ffffff; /* pure white content area */
+}
+
+/* ==========================================
+   Responsive Main Layout Grid
+   ========================================== */
+
+/* Mobile-first: full-width single column (no sidebar column reserved) */
+.main-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  flex: 1 1 auto;
+}
+
+/* lg+: activate the 320px left sidebar column */
+@media (min-width: 992px) {
+  .main-layout {
+    grid-template-columns: 320px 1fr;
+  }
+
+  /* Give the sidebar column its background and left padding */
+  .sidebar-col-bg {
+    background-color: #f8fafc;
+    padding-left: 20px;
+  }
+
+  /* Force the sidebar to be visible as a static element on desktop.
+     Bootstrap's JS sets inline visibility:hidden and transform:translateX(-X)
+     on the offcanvas element. We must use !important to override those inline styles
+     while Bootstrap's own offcanvas-lg media query also provides static positioning. */
+  .sidebar-col-bg #sidebarMenu {
+    visibility: visible !important;
+    transform: none !important;
+    position: sticky !important;
+    top: 59px;
+    width: 100% !important;
+    height: calc(100vh - 59px);
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    z-index: 1020 !important;
+  }
+
+  /* Remove the extra padding Bootstrap's offcanvas-body adds */
+  .sidebar-col-bg #sidebarMenu .offcanvas-body {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+/* border-merch utility */
+.border-merch {
+  border-color: var(--color-merch) !important;
+}
+
+/* ==========================================
+   Horizontal Feed Utilities
+   ========================================== */
+.feed-scroll-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.feed-container {
+  display: flex;
+  gap: 1rem; /* 16px equivalent to gap-3 */
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  /* Hide scrollbars completely while keeping functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  position: relative;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.feed-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* Base feed item - mobile first (e.g. 3 items) */
+.feed-item {
+  flex: 0 0 calc((100% - 2rem) / 3); /* 2 gaps of 1rem */
+  aspect-ratio: 2/3;
+  height: auto;
+}
+
+/* Tablet (4 items) */
+@media (min-width: 768px) {
+  .feed-item {
+    flex: 0 0 calc((100% - 3rem) / 4);
+  }
+}
+
+/* Desktop (6 items) */
+@media (min-width: 992px) {
+  .feed-item {
+    flex: 0 0 calc((100% - 5rem) / 6);
+  }
+}
+
+/* Scroll Buttons for Desktop */
+.feed-scroll-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: all var(--transition-fast);
+  opacity: 0.9;
+}
+
+.feed-scroll-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+  border-color: var(--color-primary);
+}
+
+.feed-scroll-btn-left {
+  left: -20px;
+}
+
+.feed-scroll-btn-right {
+  right: -20px;
+}
+
+/* transition fast */
+.transition-fast {
+  transition: all var(--transition-fast);
+}
+
+/* Input textareas */
+textarea.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+textarea.custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: 4px;
+}
+
+/* Dropdown styling updates */
+.dropdown-menu {
+  animation: fadeInDown 0.2s ease-out;
+}
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* Desktop Sidebar Nav within fixed column */
+@media (min-width: 992px) {
+  #sidebarMenu.offcanvas-lg {
+    position: relative;
+    overflow-y: auto;
+  }
+}
+
+/* Custom Grid Columns Layouts */
+@media (min-width: 1400px) {
+  .row-cols-xxl-8 > * {
+    flex: 0 0 auto;
+    width: 12.5%; /* 100/8 */
+  }
+}

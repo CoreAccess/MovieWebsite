@@ -1,0 +1,188 @@
+{{define "title"}}TV Show Details{{end}}
+
+{{define "head"}}
+    <style>
+        .tv-accent-bg { background-color: var(--color-primary-light); }
+        .tv-accent-text { color: var(--color-primary); }
+    </style>
+{{end}}
+
+{{define "main"}}
+
+    <main>
+        
+        <!-- Hero TV Details -->
+        <section class="mb-5">
+            <div class="row gx-5 align-items-start">
+                
+                <!-- Poster Column -->
+                <div class="col-lg-3 col-md-4 mb-4 mb-md-0 position-relative">
+                    <div class="media-poster-container shadow-lg" style="aspect-ratio: 2/3; border-radius: 4px;">
+                        <img src="{{.TVSeriesDetail.Series.Image}}" alt="{{.TVSeriesDetail.Series.Name}}" class="w-100 h-100 object-fit-cover">
+                    </div>
+                    
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <form action="/watchlist/toggle" method="POST" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="media_type" value="tv_series">
+                            <input type="hidden" name="media_id" value="{{.TVSeriesDetail.Series.ID}}">
+                            <button type="submit" class="btn btn-primary-accent rounded-1 fw-bold shadow-sm px-4">
+                                <i class="bi bi-bookmark-plus me-2"></i> Watchlist
+                            </button>
+                        </form>
+                        <button class="btn btn-outline-light rounded-1 fw-bold px-4" disabled><i class="bi bi-star me-2"></i> Rate</button>
+                        <button class="btn btn-outline-light rounded-1 fw-bold px-3" disabled><i class="bi bi-share"></i></button>
+                    </div>
+                </div>
+
+                <!-- Info Column -->
+                <div class="col-lg-9 col-md-8">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 border-bottom border-subtle pb-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <h1 class="display-5 fw-black text-dark mb-0 me-3" style="letter-spacing: -1px;">{{.TVSeriesDetail.Series.Name}}</h1>
+                            {{if $.AuthenticatedUser}}
+                                <a href="/wiki/edit?type=tv_series&id={{.TVSeriesDetail.Series.ID}}" class="btn btn-sm btn-outline-dark fw-bold rounded-1 ms-2" title="Suggest an edit to this page"><i class="bi bi-pencil-square me-1"></i> Edit</a>
+                            {{end}}
+                        </div>
+                        <div class="d-flex align-items-center gap-4 mt-3 mt-md-0">
+                            <!-- Rating -->
+                            <div class="text-center">
+                                <div class="text-muted text-uppercase small fw-bold mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">Rating</div>
+                                <div class="d-flex align-items-center justify-content-center">
+                                    <i class="bi bi-star-fill text-warning fs-4 me-2"></i>
+                                    <span class="fs-4 fw-bold text-dark">{{printf "%.1f" .TVSeriesDetail.Series.AggregateRating}}</span><span class="text-muted small">/10</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Actions Row for Authenticated Users -->
+                    {{if .AuthenticatedUser}}
+                    <div class="mb-4">
+                        <a href="/wiki/edit/tv/{{.TVSeriesDetail.Series.ID}}" class="btn btn-sm btn-outline-secondary rounded-1 fw-bold"><i class="bi bi-pencil-square me-1"></i> Edit Page</a>
+                    </div>
+                    {{end}}
+
+                    <!-- Metadata -->
+                    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center text-muted small fw-medium">
+                        <span class="badge bg-dark text-white rounded-1 px-2 py-1">{{if .TVSeriesDetail.Series.ContentRating}}{{.TVSeriesDetail.Series.ContentRating}}{{else}}TV-PG{{end}}</span>
+                        <span class="d-flex align-items-center"><i class="bi bi-calendar3 me-1"></i> {{.TVSeriesDetail.Series.StartDate}} - {{if .TVSeriesDetail.Series.EndDate}}{{.TVSeriesDetail.Series.EndDate}}{{else}}Present{{end}}</span>
+                        <span>•</span>
+                        <span>{{.TVSeriesDetail.Series.NumberOfSeasons}} Season(s)</span>
+                    </div>
+
+                    <!-- Creators -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12">
+                            <span class="text-muted small fw-medium d-block">Creators & Producers</span>
+                            {{range $index, $director := .TVSeriesDetail.Directors}}
+                                {{if $index}}, {{end}}
+                                <a href="/people/{{$director.ID}}/{{$director.Slug}}" class="fw-bold text-primary-accent text-decoration-none hover-dark">{{$director.Name}}</a>
+                            {{else}}
+                                <span class="text-muted small">Not Available</span>
+                            {{end}}
+                        </div>
+                    </div>
+
+                    <!-- Production & Details -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-6">
+                            <span class="text-muted small fw-medium d-block">Network / Studio</span>
+                            <span class="fw-bold text-dark">{{if .TVSeriesDetail.Series.ProductionCompany}}{{.TVSeriesDetail.Series.ProductionCompany}}{{else}}Not Available{{end}}</span>
+                        </div>
+                        <div class="col-6 col-md-6">
+                            <span class="text-muted small fw-medium d-block">Original Language</span>
+                            <span class="fw-bold text-dark">{{if .TVSeriesDetail.Series.InLanguage}}{{.TVSeriesDetail.Series.InLanguage}}{{else}}English{{end}}</span>
+                        </div>
+                    </div>
+
+                    <!-- Synopsis -->
+                    <h5 class="fw-bold text-dark mb-2">Overview</h5>
+                    <p class="text-body mb-4" style="font-size: 1.05rem; line-height: 1.6;">
+                        {{.TVSeriesDetail.Series.Description}}
+                    </p>
+
+                    <!-- Seasons & Episodes -->
+                    <h5 class="fw-bold text-dark mb-3 mt-4">Episodes</h5>
+                    <!-- Bootstrap Accordion for Seasons -->
+                    <div class="accordion mb-5" id="seasonsAccordion">
+                        <div class="accordion-item border border-subtle rounded-1 mb-2 overflow-hidden shadow-sm">
+                            <h2 class="accordion-header" id="headingSeason1">
+                                <button class="accordion-button bg-light fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeason1" aria-expanded="true" aria-controls="collapseSeason1">
+                                    All Episodes
+                                </button>
+                            </h2>
+                            <div id="collapseSeason1" class="accordion-collapse collapse show" aria-labelledby="headingSeason1" data-bs-parent="#seasonsAccordion">
+                                <div class="accordion-body p-0">
+                                    
+                                    {{range .TVSeriesDetail.Episodes}}
+                                    <!-- Episode -->
+                                    <div class="d-flex p-3 border-bottom border-subtle hover-bg-light transition-fast">
+                                        <div class="me-3">
+                                            <img src="{{if .Image}}{{.Image}}{{else}}https://placehold.co/200x112/0d6efd/FFFFFF?text=Ep+{{.EpisodeNumber}}{{end}}" alt="Episode {{.EpisodeNumber}}" class="rounded-1" style="width: 120px; height: 68px; object-fit: cover;">
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-1"><a href="#" class="text-dark text-decoration-none hover-primary">{{.EpisodeNumber}}. {{.Name}}</a></h6>
+                                            <div class="d-flex align-items-center mb-2 small text-muted gap-2">
+                                                <span>{{.DatePublished}}</span>
+                                                <span>•</span>
+                                                <span>{{.Duration}}m</span>
+                                            </div>
+                                            <p class="small text-body mb-0">{{.Description}}</p>
+                                        </div>
+                                    </div>
+                                    {{else}}
+                                    <div class="p-3 text-muted small">No episodes found.</div>
+                                    {{end}}
+
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+            </div>
+        </section>
+
+        <!-- Official Merchandise Section -->
+                    <section class="mb-5 pb-3">
+            <div class="bg-subtle-merch p-4 rounded-1 position-relative overflow-hidden border border-merch-light shadow-sm">
+                <!-- Decorative Icon -->
+                <i class="bi bi-bag-heart-fill position-absolute text-merch opacity-10" style="font-size: 15rem; right: -2rem; bottom: -5rem; transform: rotate(-15deg);"></i>
+                
+                <div class="d-flex justify-content-between align-items-end mb-4 position-relative z-1">
+                    <div>
+                        <span class="badge bg-white text-merch border border-merch-light rounded-1 mb-2 px-3 py-1 fw-bold shadow-sm">Vault-Tec Gear</span>
+                        <h3 class="fw-bold text-dark mb-0">Shop The Show</h3>
+                        <p class="text-muted small mb-0">Collectibles, games, and apparel available via eBay.</p>
+                    </div>
+                </div>
+                
+                <div class="row row-cols-2 row-cols-md-4 g-4 position-relative z-1 flex-nowrap overflow-auto pb-3 custom-scrollbar">
+                    
+                    {{range .EbayListings}}
+                    <!-- eBay Merch Item -->
+                    <div class="col">
+                        <div class="card bg-white border-0 shadow-sm h-100 rounded-1 overflow-hidden text-center hover-lift position-relative" style="transition: transform 0.2s;">
+                            {{if .IsHot}}
+                            <div class="position-absolute top-0 start-0 bg-dark text-white p-1 px-2 small rounded-bottom-end z-1" style="font-size: 0.6rem;">Hot</div>
+                            {{else}}
+                            <div class="position-absolute top-0 start-0 bg-dark text-white p-1 px-2 small rounded-bottom-end z-1" style="font-size: 0.6rem;">Sponsored</div>
+                            {{end}}
+                            <img src="{{.ImageUrl}}" alt="{{.Title}}" class="card-img-top p-3 bg-light object-fit-contain" style="height: 180px;">
+                            <div class="card-body p-3">
+                                <h6 class="fw-bold text-dark mb-1 text-truncate" style="font-size: 0.9rem;">{{.Title}}</h6>
+                                <p class="text-merch fw-bold mb-3">{{.Price}}</p>
+                                <a href="{{.Url}}" target="_blank" class="btn btn-merch btn-sm w-100 rounded-1 fw-medium border border-merch shadow-sm">
+                                    <i class="bi bi-cart2 me-1"></i> Buy on eBay
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {{end}}
+
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+{{end}}

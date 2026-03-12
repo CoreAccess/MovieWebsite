@@ -1,0 +1,104 @@
+{{define "main"}}
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-subtle">
+            <div>
+                <h2 class="fw-bold mb-1 text-dark"><i class="bi bi-shield-lock-fill text-danger me-2"></i>Administration</h2>
+                <p class="text-muted small mb-0">System overview and moderation tools.</p>
+            </div>
+        </div>
+        
+        <div class="row g-4 mb-4">
+            <!-- Metrics Cards -->
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-1 bg-white">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-people-fill text-primary fs-1 mb-2"></i>
+                        <h3 class="fw-black mb-0">{{.UserCount}}</h3>
+                        <p class="text-muted small fw-bold text-uppercase mb-0 mt-1" style="letter-spacing: 1px;">Total Users</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-1 bg-white">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-film text-success fs-1 mb-2"></i>
+                        <h3 class="fw-black mb-0">{{.MediaCount}}</h3>
+                        <p class="text-muted small fw-bold text-uppercase mb-0 mt-1" style="letter-spacing: 1px;">Media Assets</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-1 bg-white">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-pencil-square text-warning fs-1 mb-2"></i>
+                        <h3 class="fw-black mb-0">{{.PendingEdits}}</h3>
+                        <p class="text-muted small fw-bold text-uppercase mb-0 mt-1" style="letter-spacing: 1px;">Pending Edits</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card border-0 shadow-sm rounded-1 bg-white">
+                    <div class="card-body p-4 text-center">
+                        <i class="bi bi-currency-dollar text-primary-accent fs-1 mb-2"></i>
+                        <h3 class="fw-black mb-0">{{.ActiveAds}}</h3>
+                        <p class="text-muted small fw-bold text-uppercase mb-0 mt-1" style="letter-spacing: 1px;">Active Ad Campaigns</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row gx-lg-5">
+            <div class="col-lg-12">
+                <div class="card border-0 shadow-sm rounded-1 mt-4">
+                    <div class="card-header bg-white border-bottom border-subtle py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="fw-bold text-dark mb-0"><i class="bi bi-clipboard-check me-2"></i>Wiki Moderation Queue</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="small fw-bold text-muted text-uppercase" style="letter-spacing: 1px;">Date</th>
+                                        <th class="small fw-bold text-muted text-uppercase" style="letter-spacing: 1px;">User ID</th>
+                                        <th class="small fw-bold text-muted text-uppercase" style="letter-spacing: 1px;">Target</th>
+                                        <th class="small fw-bold text-muted text-uppercase" style="letter-spacing: 1px;">Suggested Change</th>
+                                        <th class="small fw-bold text-muted text-uppercase text-end" style="letter-spacing: 1px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{range .EditSuggestions}}
+                                    <tr>
+                                        <td class="small">{{.CreatedAt.Format "Jan 02, 2006"}}</td>
+                                        <td class="small"><span class="badge bg-secondary rounded-1 px-2">#{{.UserID}}</span></td>
+                                        <td class="fw-medium text-dark small">{{.EntityType}} #{{.EntityID}}</td>
+                                        <td class="small text-muted" style="max-width: 300px;">
+                                            <div class="text-truncate">{{.SuggestedData}}</div>
+                                        </td>
+                                        <td class="text-end">
+                                            <form action="/admin/wiki/approve" method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                <input type="hidden" name="suggestion_id" value="{{.ID}}">
+                                                <button type="submit" class="btn btn-sm btn-outline-success rounded-1 shadow-sm px-3"><i class="bi bi-check-lg"></i> Approve</button>
+                                            </form>
+                                            <form action="/admin/wiki/reject" method="POST" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                                <input type="hidden" name="suggestion_id" value="{{.ID}}">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger rounded-1 shadow-sm px-3 ms-1"><i class="bi bi-x-lg"></i> Reject</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    {{else}}
+                                    <tr>
+                                        <td colspan="5" class="text-center py-5 text-muted small">The moderation queue is empty.</td>
+                                    </tr>
+                                    {{end}}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{{end}}

@@ -1,0 +1,137 @@
+{{define "title"}}Home{{end}}
+
+{{define "main"}}
+    <!-- CENTER COLUMN: Profile Content -->
+            <div class="col-lg-12 pb-5">
+                
+                {{if .AuthenticatedUser}}
+                <!-- 1. Profile Hero Section -->
+                <div class="card border-0 shadow-sm rounded-1 mb-4 overflow-hidden position-relative" style="background-color: #f8fafc;">
+                    <div class="bg-primary-accent" style="height: 120px; width: 100%;"></div>
+                    <div class="card-body px-4 pb-4 position-relative z-1 d-flex flex-column flex-md-row justify-content-between align-items-md-end gap-3" style="margin-top: -50px;">
+                        
+                        <div class="d-flex align-items-end gap-3">
+                            <img src="{{if .AuthenticatedUser.Avatar}}{{.AuthenticatedUser.Avatar}}{{else}}https://placehold.co/150x150/e2e8f0/64748b?text={{.AuthenticatedUser.Username}}{{end}}" alt="Avatar" class="rounded-circle border border-4 border-white shadow-sm bg-white" style="width: 120px; height: 120px; object-fit: cover;">
+                            <div class="mb-2">
+                                <h3 class="fw-bold mb-0 text-dark">{{.AuthenticatedUser.Username}}</h3>
+                                <p class="text-muted small mb-0">{{.AuthenticatedUser.Role}} • Member since {{printf "%.10s" .AuthenticatedUser.CreatedAt.String}}</p>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <!-- StreamLine Reputation Score -->
+                            <div class="bg-white border border-subtle rounded-1 px-3 py-2 d-flex align-items-center shadow-sm">
+                                <i class="bi bi-star-fill text-warning fs-5 me-2"></i>
+                                <div>
+                                    <span class="d-block small text-muted lh-1" style="font-size: 0.70rem; font-weight: 600; text-transform: uppercase;">Reputation</span>
+                                    <span class="d-block fw-bold text-dark lh-1 fs-5">{{.AuthenticatedUser.ReputationScore}}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. Nav Pills for Profile Sections -->
+                <ul class="nav nav-pills mb-4 border-bottom border-subtle pb-2 gap-2" id="profileTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active bg-subtle-primary text-primary-accent fw-bold rounded-1 border-0 shadow-sm" id="overview-tab" data-bs-toggle="pill" data-bs-target="#overview" type="button" role="tab" aria-selected="true" style="transition: all 0.2s;">Overview</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link text-muted fw-medium rounded-1 border-0" id="settings-tab" data-bs-toggle="pill" data-bs-target="#settings" type="button" role="tab" aria-selected="false" style="transition: all 0.2s;">Settings</button>
+                    </li>
+                </ul>
+
+                <!-- 3. Tab Content -->
+                <div class="tab-content" id="profileTabContent">
+                    
+                    <!-- Tab 1: Overview (Watchlists & Achievements) -->
+                    <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                        <div class="row gx-4">
+                            <!-- Left: Watchlists -->
+                            <div class="col-md-7 mb-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3">
+                                    <h5 class="fw-bold mb-0 test-dark">My Watchlists</h5>
+                                    <button class="btn btn-sm btn-outline-primary rounded-1 fw-bold"><i class="bi bi-plus"></i> New</button>
+                                </div>
+                                <div class="card border-0 shadow-sm rounded-1 p-4 bg-white text-center">
+                                    <i class="bi bi-collection-play text-muted opacity-25 mb-2" style="font-size: 3rem;"></i>
+                                    <h6 class="fw-bold text-dark">No Watchlists Yet</h6>
+                                    <p class="text-muted small mb-0">Create a watchlist to keep track of movies and shows you want to watch.</p>
+                                </div>
+                            </div>
+                            <!-- Right: Achievements -->
+                            <div class="col-md-5 mb-4">
+                                <h5 class="fw-bold mb-3 test-dark">Recent Achievements</h5>
+                                <div class="card border-0 shadow-sm rounded-1 bg-white p-3">
+                                    <div class="d-flex align-items-center gap-3 mb-3 border-bottom border-subtle pb-3">
+                                        <div class="bg-subtle-merch text-merch rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 45px; height: 45px;">
+                                            <i class="bi bi-person-check-fill fs-4"></i>
+                                        </div>
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark" style="font-size: 0.9rem;">Welcome to StreamLine</h6>
+                                            <p class="text-muted small mb-0 lh-sm">Created an account and joined the community.</p>
+                                        </div>
+                                    </div>
+                                    <div class="text-center">
+                                        <button class="btn btn-sm btn-light w-100 rounded-1 text-muted fw-bold border-subtle">View All Achievements</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab 2: Settings -->
+                    <div class="tab-pane fade" id="settings" role="tabpanel">
+                        <div class="card border-0 shadow-sm rounded-1 mb-4 bg-white">
+                            <div class="card-body p-4">
+                                <h5 class="fw-bold mb-4 text-dark border-bottom border-subtle pb-2">Account Settings</h5>
+                                <form action="/profile/edit" method="POST">
+                                    <!-- CSRF Token -->
+                                    <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-6 mb-3">
+                                            <label class="form-label text-muted small fw-bold">Username</label>
+                                            <input type="text" class="form-control rounded-1" value="{{.AuthenticatedUser.Username}}" disabled>
+                                            <div class="form-text">Usernames cannot be changed.</div>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label for="email" class="form-label text-muted small fw-bold">Email Address</label>
+                                            <input type="email" class="form-control rounded-1" id="email" name="email" value="{{.AuthenticatedUser.Email}}">
+                                        </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label for="avatarUrl" class="form-label text-muted small fw-bold">Avatar URL</label>
+                                        <input type="url" class="form-control rounded-1" id="avatarUrl" name="avatarUrl" placeholder="https://..." value="{{.AuthenticatedUser.Avatar}}">
+                                    </div>
+                                    
+                                    <h6 class="fw-bold mb-3 mt-5 text-dark border-bottom border-subtle pb-2">Notification Preferences</h6>
+                                    <div class="form-check form-switch mb-3">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="emailAlerts" checked>
+                                        <label class="form-check-label text-body" for="emailAlerts">Receive community updates via email</label>
+                                    </div>
+                                    <div class="form-check form-switch mb-4">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="siteAlerts" checked>
+                                        <label class="form-check-label text-body" for="siteAlerts">Show in-app notifications for Watchlist premieres</label>
+                                    </div>
+
+                                    <div class="d-flex justify-content-end mt-4">
+                                        <button type="submit" class="btn btn-primary-accent rounded-1 fw-bold shadow-sm px-4">Save Changes</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {{else}}
+                <div class="alert alert-warning rounded-1 shadow-sm border-0 d-flex align-items-center" role="alert">
+                    <i class="bi bi-exclamation-triangle-fill fs-4 me-3 text-warning"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-dark">Authentication Required</h6>
+                        <p class="mb-0 small text-muted">You must be logged in to view this page. <a href="/login" class="alert-link">Log in here</a>.</p>
+                    </div>
+                </div>
+                {{end}}
+
+            </div>
+{{end}}

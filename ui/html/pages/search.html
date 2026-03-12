@@ -1,0 +1,143 @@
+{{define "title"}}Search Results{{end}}
+
+{{define "main"}}
+
+    <!-- Main Content Area -->
+    <main class="py-4 py-lg-5 flex-grow-1">
+        
+                <!-- COLUMN 2: Results Area -->
+                <div class="col-lg-9">
+                    <div class="d-flex justify-content-between align-items-end border-bottom border-subtle pb-3 mb-4">
+                        <div>
+                            {{if .SearchQuery}}
+                            <h3 class="fw-bold mb-1">Search Results for "{{.SearchQuery}}" <span class="text-muted fs-5">({{.ResultCount}} Results Found)</span></h3>
+                            {{else}}
+                            <h3 class="fw-bold mb-1">Search Results</h3>
+                            {{end}}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="small text-muted text-nowrap">Sort by:</label>
+                            <select class="form-select form-select-sm bg-light border-0 shadow-none" style="width: auto;">
+                                <option selected>Relevance</option>
+                                <option value="popular">Popularity</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Grid Results -->
+                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-3 g-4 mb-5">
+                        
+                        {{range .Movies}}
+                        <!-- Movie Result -->
+                        <div class="col">
+                            <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative">
+                                    <div class="corner-ribbon movie">Movie</div>
+                                    <div class="media-poster-container">
+                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                                        <div class="position-absolute bottom-0 start-0 p-2 w-100" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
+                                            <div class="d-flex justify-content-between align-items-center text-white">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-star-fill text-warning small me-1"></i>
+                                                    <span class="small fw-bold">{{.AggregateRating}}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 bg-white">
+                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+
+                        {{range .Shows}}
+                        <!-- TV Result -->
+                        <div class="col">
+                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative">
+                                    <div class="corner-ribbon tv">TV Show</div>
+                                    <div class="media-poster-container">
+                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                                        <div class="position-absolute bottom-0 start-0 p-2 w-100" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
+                                            <div class="d-flex justify-content-between align-items-center text-white">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="bi bi-star-fill text-warning small me-1"></i>
+                                                    <span class="small fw-bold">{{.AggregateRating}}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="p-3 bg-white">
+                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+
+                        {{range .People}}
+                        <!-- Person Result -->
+                        <div class="col">
+                            <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                                <div class="media-card h-100 position-relative bg-light border">
+                                    <div class="media-poster-container rounded-circle mx-auto mt-4 mb-2 shadow-sm" style="width: 140px; height: 140px; aspect-ratio: 1/1;">
+                                        <img src="{{if .Image}}{{.Image}}{{else}}https://ui-avatars.com/api/?name={{.Name}}{{end}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                                    </div>
+                                    <div class="p-3 text-center">
+                                        <h6 class="fw-bold text-dark mb-1">{{.Name}}</h6>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                        {{end}}
+
+                    </div>
+                </div>
+
+                <!-- COLUMN 3: Filters Sidebar -->
+                <div class="col-lg-3 mb-4 mb-lg-0">
+                    <div class="bg-surface rounded-1 shadow-sm p-4 sticky-top" style="top: 100px; border: 1px solid var(--border-subtle);">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h5 class="fw-bold mb-0">Filters</h5>
+                            <button class="btn btn-sm btn-link text-muted text-decoration-none">Clear</button>
+                        </div>
+                        
+                        <!-- Type Filter -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Result Type</h6>
+                            <div class="d-flex flex-column gap-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeAll" checked>
+                                    <label class="form-check-label" for="typeAll">All Results</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeMovie">
+                                    <label class="form-check-label" for="typeMovie">Movies Only</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeTv">
+                                    <label class="form-check-label" for="typeTv">TV Shows Only</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="typeFilter" id="typePeople">
+                                    <label class="form-check-label" for="typePeople">People Only</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Genre Filter -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Genres</h6>
+                            <select class="form-select bg-light border-0 shadow-none">
+                                <option selected>All Genres</option>
+                                <option value="action">Action</option>
+                                <option value="comedy">Comedy</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+    </main>
+
+{{end}}

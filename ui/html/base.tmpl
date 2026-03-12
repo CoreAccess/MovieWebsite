@@ -1,0 +1,60 @@
+{{define "base"}}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{template "title" .}} | StreamLine</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/static/css/style.css?v=1.1">
+    {{block "head" .}}{{end}}
+</head>
+<body class="bg-main d-flex flex-column min-vh-100">
+    
+    {{template "nav" .}}
+    
+    <!-- Central Global Structure (Below Header, Above Footer) -->
+    <!-- main-layout class handles responsive grid: 1fr on mobile, 320px+1fr on lg+ -->
+    <div class="main-layout">
+        
+        <!-- Global Left Sidebar Column (offcanvas on mobile, static on lg+) -->
+        <div class="sidebar-col-bg">
+            {{template "sidebar" .}}
+        </div>
+
+        <!-- Main Content Area (takes remaining width, 1fr) -->
+        <div style="min-width: 0; padding: 1.5rem 1.5rem;">
+            {{template "main" .}}
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-auto py-5 bg-footer text-footer-muted border-top border-subtle">
+        <div class="container-fluid px-4 px-lg-5">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center small gap-3">
+                <p class="mb-0">&copy; 2026 StreamLine. All rights reserved.</p>
+                <ul class="list-inline mb-0">
+                    <li class="list-inline-item"><a href="/about" class="text-decoration-none text-footer-muted hover-dark">About</a></li>
+                    <li class="list-inline-item ms-md-3"><a href="/privacy" class="text-decoration-none text-footer-muted hover-dark">Privacy Policy</a></li>
+                    <li class="list-inline-item ms-md-3"><a href="/terms" class="text-decoration-none text-footer-muted hover-dark">Terms of Service</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Custom JS -->
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
+{{end}}
