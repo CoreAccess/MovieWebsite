@@ -13,21 +13,30 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// DB holds the global database connection pool.
 var DB *sql.DB
 
+// InitDB sets up the database connection, creates tables if they don't exist,
+// and populates it with seed data from TMDB if the database is initially empty.
+// dataSourceName specifies the path to the SQLite file (e.g., "./streamline.db").
 func InitDB(dataSourceName string, tmdbAPIKey string) (*sql.DB, error) {
 	var err error
+	// sql.Open initializes a connection pool for a specific driver ("sqlite" here).
+	// It doesn't actually connect to the database yet.
 	DB, err = sql.Open("sqlite", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
 
+	// Ping actually establishes a connection and verifies that the database is reachable.
 	if err = DB.Ping(); err != nil {
 		return nil, err
 	}
 
 	log.Println("Connected to SQLite Database")
+	// Run the schema creation query to ensure all tables exist before proceeding.
 	createTables()
+	// Populate initial movie/show/actor data if the `movies` table has 0 rows.
 	seedDataIfEmpty(tmdbAPIKey)
 	return DB, nil
 }
@@ -868,30 +877,36 @@ func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	return cast, nil
 }
 
-// GetMovieDetail fetches a movie and all its related entities by ID
+// GetMovieDetail fetches a movie and all its related entities by ID.
+// This acts as a single aggregation function so the UI layer gets a complete
+// MovieDetail model without having to make multiple separate DB calls itself.
 func GetMovieDetail(id int) (models.MovieDetail, error) {
 	var detail models.MovieDetail
 	
+	// First, fetch the core movie information from the 'movies' table.
 	movie, err := GetMovieByID(id)
 	if err != nil {
-		return detail, err
+		return detail, err // If the main movie data fails, abort and return the error.
 	}
-	detail.Movie = movie
+	detail.Movie = movie // Assign the fetched movie data to the response struct.
 
+	// Second, fetch the cast list by joining 'movie_cast', 'people', and 'characters'.
 	cast, err := GetMovieCast(id)
 	if err != nil {
+		// Log the error but don't fail the entire request; the movie page can still render without cast.
 		log.Printf("Error fetching cast for movie %d: %v", id, err)
-		// Don't fail the whole request just because cast is missing
 	} else {
-		detail.Cast = cast
+		detail.Cast = cast // Assign the slice of cast members.
 	}
 
+	// Third, fetch crew members (directors and writers) using the 'media_crew' table.
 	directors, writers, err := GetMediaCrew("movie", movie.ID)
 	if err == nil {
 		detail.Directors = directors
 		detail.Writers = writers
 	}
 
+	// Return the populated detail struct containing the movie, cast, directors, and writers.
 	return detail, nil
 }
 

@@ -1,8 +1,11 @@
+// Package models defines the core data structures used throughout the application.
+// These structs are used to map database rows into Go objects and pass data to the HTML templates for rendering.
 package models
 
 import "time"
 
-// User represents a generalized website user
+// User represents a generalized website user.
+// This struct maps directly to the `users` table in the database.
 type User struct {
 	ID              int
 	Username        string
@@ -10,17 +13,18 @@ type User struct {
 	PasswordHash    string
 	GoogleID        string
 	FacebookID      string
-	Avatar          string
-	ReputationScore int
-	Role            string // User, Contributor, Moderator, Admin
+	Avatar          string // URL or path to the user's profile picture
+	ReputationScore int    // Score based on community engagement and contributions
+	Role            string // Represents user privileges (e.g., 'user', 'contributor', 'moderator', 'admin')
 	CreatedAt       time.Time
 }
 
-// Session represents a server-side session
+// Session represents a server-side session used for authenticating users.
+// Instead of storing tokens, we use a database-backed session model.
 type Session struct {
-	ID        string    // Session ID (Cookie value)
-	UserID    int
-	ExpiresAt time.Time
+	ID        string    // Session ID (The value stored in the client's cookie)
+	UserID    int       // Foreign key linking the session back to the specific User
+	ExpiresAt time.Time // The expiration time for the session
 }
 
 // PasswordResetToken represents a password recovery token
@@ -71,20 +75,22 @@ type Character struct {
 	Image       string
 }
 
-// Movie represents schema.org/Movie
+// Movie represents schema.org/Movie.
+// It corresponds to the core details found in the `movies` table in the database.
+// This structure is often passed directly to templates to display movie listings or specific movie metadata.
 type Movie struct {
 	ID                int
 	Name              string
-	Slug              string
+	Slug              string // URL-friendly string representing the movie name
 	DatePublished     string
 	Description       string
-	Image             string
+	Image             string // URL or path to the poster image
 	Trailer           string
 	Video             string
 	ContentRating     string
-	Duration          int
-	AggregateRating   float64
-	Genre             string // Stored as JSON string representation
+	Duration          int     // Runtime length of the movie
+	AggregateRating   float64 // Average score given by users
+	Genre             string  // Stored as JSON string representation (e.g., '["Action", "Drama"]')
 	Budget            string
 	BoxOffice         string
 	InLanguage        string
@@ -132,12 +138,14 @@ type CastMember struct {
 	BillingOrder int
 }
 
-// MovieDetail represents a complete movie profile including cast, crew, and studios
+// MovieDetail represents an aggregated view of a movie profile including its core details, cast, and crew.
+// It is specifically designed to supply all necessary data to the `movies.html` template in a single object.
+// The `database.GetMovieDetail` function constructs this by joining several underlying tables together.
 type MovieDetail struct {
-	Movie     Movie
-	Cast      []CastMember
-	Directors []Person
-	Writers   []Person
+	Movie     Movie        // The core movie data
+	Cast      []CastMember // List of actors and the characters they played
+	Directors []Person     // List of individuals credited as directors
+	Writers   []Person     // List of individuals credited as writers
 }
 
 // TVSeriesDetail represents a complete TV show profile including cast and episodes
