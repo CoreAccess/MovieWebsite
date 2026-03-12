@@ -35,12 +35,14 @@ type TrendingMoviesResponse struct {
 }
 
 type TMDBMovie struct {
-	ID          int     `json:"id"`
-	Title       string  `json:"title"`
-	Overview    string  `json:"overview"`
-	ReleaseDate string  `json:"release_date"`
-	PosterPath  string  `json:"poster_path"`
-	VoteAverage float64 `json:"vote_average"`
+	ID               int     `json:"id"`
+	Title            string  `json:"title"`
+	Overview         string  `json:"overview"`
+	ReleaseDate      string  `json:"release_date"`
+	PosterPath       string  `json:"poster_path"`
+	VoteAverage      float64 `json:"vote_average"`
+	OriginalLanguage string  `json:"original_language"`
+	GenreIDs         []int   `json:"genre_ids"`
 }
 
 type TrendingTVResponse struct {
@@ -48,12 +50,14 @@ type TrendingTVResponse struct {
 }
 
 type TMDBTV struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	Overview     string  `json:"overview"`
-	FirstAirDate string  `json:"first_air_date"`
-	PosterPath   string  `json:"poster_path"`
-	VoteAverage  float64 `json:"vote_average"`
+	ID               int     `json:"id"`
+	Name             string  `json:"name"`
+	Overview         string  `json:"overview"`
+	FirstAirDate     string  `json:"first_air_date"`
+	PosterPath       string  `json:"poster_path"`
+	VoteAverage      float64 `json:"vote_average"`
+	OriginalLanguage string  `json:"original_language"`
+	GenreIDs         []int   `json:"genre_ids"`
 }
 
 type CreditsResponse struct {
@@ -91,6 +95,61 @@ type TMDBEpisode struct {
 	EpisodeNumber int    `json:"episode_number"`
 	SeasonNumber  int    `json:"season_number"`
 	Runtime       int    `json:"runtime"`
+}
+
+type TMDBGenreResponse struct {
+	Genres []TMDBGenre `json:"genres"`
+}
+
+type TMDBGenre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (c *Client) FetchMovieGenres() ([]TMDBGenre, error) {
+	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/movie/list?language=en", nil)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %s", res.Status)
+	}
+
+	var data TMDBGenreResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	return data.Genres, nil
+}
+
+func (c *Client) FetchTVGenres() ([]TMDBGenre, error) {
+	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/tv/list?language=en", nil)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %s", res.Status)
+	}
+
+	var data TMDBGenreResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	return data.Genres, nil
 }
 
 func (c *Client) FetchTrendingMovies() ([]TMDBMovie, error) {
