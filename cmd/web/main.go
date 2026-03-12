@@ -49,18 +49,27 @@ type templateData struct {
 	Next              string
 }
 
+// main is the entry point of the application. It initializes the database, sets up the router (mux),
+// configures routes for serving static files and handling various HTTP requests, and starts the web server.
 func main() {
+	// Initialize the SQLite database and seed it with data from TMDB if empty.
+	// This uses a predefined TMDB API key to fetch initial movie and TV show data.
 	tmdbKey := "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhOWJkZTc1NTdkZTNmNTBiN2FiNzRhODU2MGU0YTc2NCIsIm5iZiI6MTY4ODY3NDU1OC4zOTIsInN1YiI6IjY0YTcyMGZlZjkyNTMyMDE0ZTljNmE4NCIsInNjb3BlcyI6WyJhcGpfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8dDf7xLb6lSf1n6TwUgxV3loKu3ieuB0yQw0J4MXCg4"
 	if _, err := database.InitDB("./streamline.db", tmdbKey); err != nil {
-		log.Fatalf("Failed to initialize database: %v\n", err)
+		log.Fatalf("Failed to initialize database: %v\n", err) // Log fatal error if DB initialization fails
 	}
+
+	// http.NewServeMux() creates a new HTTP request multiplexer (router).
+	// It matches the URL of each incoming request against a list of registered patterns and calls the handler for the pattern that most closely matches the URL.
 	mux := http.NewServeMux()
 
-	// Serve static files
+	// Serve static files (CSS, JS, images) from the ./ui/static/ directory.
+	// http.StripPrefix is used to remove the "/static/" prefix from the URL path before searching the file system.
 	fileServer := http.FileServer(http.Dir("./ui/static/"))
 	mux.Handle("/static/", http.StripPrefix("/static", fileServer))
 
-	// Routes
+	// Register route handlers. Each mux.HandleFunc associates a specific URL path with a Go function.
+	// For example, when a GET request is made to "/", the 'home' function will be executed.
 	mux.HandleFunc("GET /{$}", home)
 	mux.HandleFunc("GET /movies", moviesListView)
 	mux.HandleFunc("GET /movies/{id}/{slug}", movieView)
@@ -113,15 +122,24 @@ func main() {
 	log.Fatal(err)
 }
 
+// movieView is an HTTP handler function that responds to requests for individual movie details.
+// It extracts the movie ID and slug from the URL path, retrieves the movie's data from the database,
+// and renders the HTML template to display the movie page.
 func movieView(w http.ResponseWriter, r *http.Request) {
+	// Extract the 'id' and 'slug' path values from the URL, defined in the route: /movies/{id}/{slug}
 	idStr := r.PathValue("id")
 	slug := r.PathValue("slug")
+
+	// Convert the ID string to an integer
 	id, err := strconv.Atoi(idStr)
 	if err != nil || slug == "" {
+		// If the ID is invalid or slug is missing, return a 404 Not Found error
 		http.NotFound(w, r)
 		return
 	}
 
+	// Define the slice of HTML template files needed to render the page.
+	// The order typically includes the base layout, partials like nav/sidebar, and the specific page template.
 	files := []string{
 		"./ui/html/base.tmpl",
 		"./ui/html/partials/nav.tmpl",
@@ -129,6 +147,8 @@ func movieView(w http.ResponseWriter, r *http.Request) {
 		"./ui/html/pages/movies.html",
 	}
 
+	// template.ParseFiles parses the template files and creates a new *template.Template.
+	// We use this to convert our HTML files into executable templates.
 	ts, err := template.ParseFiles(files...)
 	if err != nil {
 		log.Println(err.Error())
@@ -136,17 +156,22 @@ func movieView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fetch the complete movie details (including cast, crew, etc.) from the database layer.
 	detail, err := database.GetMovieDetail(id)
 	if err != nil {
 		log.Println("Error fetching movie details:", err)
-		http.NotFound(w, r)
+		http.NotFound(w, r) // Show a 404 if the movie doesn't exist in the DB
 		return
 	}
 
+	// Prepare the template data structure. getTemplateData gives us common data (like nav info).
 	data := getTemplateData(detail.Movie.Name, r)
 	data.MovieDetail = detail
+	// Fetch real-time affiliate listings for monetization based on the movie's name.
 	data.EbayListings = monetization.FetchEbayListings(detail.Movie.Name)
 
+	// Execute the "base" template, passing in our data structure.
+	// This generates the final HTML and writes it to the http.ResponseWriter (w) to send to the client.
 	err = ts.ExecuteTemplate(w, "base", data)
 	if err != nil {
 		log.Println(err.Error())
