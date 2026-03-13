@@ -901,7 +901,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		}
 
 		client := tmdb.NewClient(tmdbAPIKey)
-		
+
 		// Pre-seed genres
 		mGenres, err := client.FetchMovieGenres()
 		if err == nil {
@@ -926,9 +926,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		} else {
 			for _, m := range movies {
 				slug := tmdb.Slugify(m.Title)
-				if slug == "" { slug = "movie" }
+				if slug == "" {
+					slug = "movie"
+				}
 				langCode := m.OriginalLanguage
-				if langCode == "" { langCode = "en" }
+				if langCode == "" {
+					langCode = "en"
+				}
 				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
 					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, langCode)
 				if err != nil {
@@ -1008,105 +1012,140 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		if err != nil {
 			log.Println("Error fetching shows from TMDB:", err)
 		} else {
-			for _, s := range shows {
-				slug := tmdb.Slugify(s.Name)
-				if slug == "" { slug = "show" }
-				langCode := s.OriginalLanguage
-				if langCode == "" { langCode = "en" }
-				res, err := DB.Exec("INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
+			// Batch Insert TV Series to resolve N+1 issue
+			if len(shows) > 0 {
+				query := "INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES "
+				var args []interface{}
+				for i, s := range shows {
+					slug := tmdb.Slugify(s.Name)
+					if slug == "" {
+						slug = "show"
+					}
+					langCode := s.OriginalLanguage
+					if langCode == "" {
+						langCode = "en"
+					}
+					query += "(?, ?, ?, ?, ?, ?, ?)"
+					if i < len(shows)-1 {
+						query += ", "
+					}
+					args = append(args, s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
+				}
+				query += " RETURNING id"
+
+				rows, err := DB.Query(query, args...)
 				if err != nil {
-					log.Printf("Error inserting show %s: %v", s.Name, err)
-					continue
-				}
-				seriesID, _ := res.LastInsertId()
-
-				for _, gID := range s.GenreIDs {
-					_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
-				}
-
-				// Fetch Credits
-				credits, err := client.FetchTVCredits(s.ID)
-				if err == nil {
-					for _, cast := range credits.Cast {
-						personSlug := tmdb.Slugify(cast.Name)
-						if personSlug == "" {
-							personSlug = "person"
+					log.Printf("Error batch inserting shows: %v", err)
+				} else {
+					var seriesIDs []int64
+					for rows.Next() {
+						var id int64
+						if err := rows.Scan(&id); err == nil {
+							seriesIDs = append(seriesIDs, id)
 						}
-						var personID int64
-						err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
-						if err != nil {
-							var image string
-							if cast.ProfilePath != "" {
-								image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
-							}
-							res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
-							personID, _ = res.LastInsertId()
-						}
-
-						characterSlug := tmdb.Slugify(cast.Character)
-						if characterSlug == "" {
-							characterSlug = "character"
-						}
-						var charID int64
-						err = DB.QueryRow("SELECT id FROM characters WHERE name = ?", cast.Character).Scan(&charID)
-						if err != nil {
-							res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
-							charID, _ = res.LastInsertId()
-						}
-
-						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 					}
+					rows.Close()
 
-					for _, crew := range credits.Crew {
-						if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
-							crewSlug := tmdb.Slugify(crew.Name)
-							if crewSlug == "" {
-								crewSlug = "crew"
-							}
-							var personID int64
-							err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
-							if err != nil {
-								var image string
-								if crew.ProfilePath != "" {
-									image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+					// Now loop to insert the dependent relations per show
+					for i, s := range shows {
+						if i >= len(seriesIDs) {
+							log.Printf("Skipping dependent insertions for show %s due to missing ID", s.Name)
+							continue
+						}
+						seriesID := seriesIDs[i]
+
+						for _, gID := range s.GenreIDs {
+							_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
+						}
+
+						// Fetch Credits
+						credits, err := client.FetchTVCredits(s.ID)
+						if err == nil {
+							for _, cast := range credits.Cast {
+								personSlug := tmdb.Slugify(cast.Name)
+								if personSlug == "" {
+									personSlug = "person"
 								}
-								res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
-								personID, _ = res.LastInsertId()
+								var personID int64
+								err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
+								if err != nil {
+									var image string
+									if cast.ProfilePath != "" {
+										image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
+									}
+									res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
+									personID, _ = res.LastInsertId()
+								}
+
+								characterSlug := tmdb.Slugify(cast.Character)
+								if characterSlug == "" {
+									characterSlug = "character"
+								}
+								var charID int64
+								err = DB.QueryRow("SELECT id FROM characters WHERE name = ?", cast.Character).Scan(&charID)
+								if err != nil {
+									res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
+									charID, _ = res.LastInsertId()
+								}
+
+								_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 							}
 
-							job := "writer"
-							if strings.Contains(crew.Job, "Producer") {
-								job = "director" // mapping series creators/producers as "directors" for UI simplicity
+							for _, crew := range credits.Crew {
+								if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
+									crewSlug := tmdb.Slugify(crew.Name)
+									if crewSlug == "" {
+										crewSlug = "crew"
+									}
+									var personID int64
+									err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
+									if err != nil {
+										var image string
+										if crew.ProfilePath != "" {
+											image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+										}
+										res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
+										personID, _ = res.LastInsertId()
+									}
+
+									job := "writer"
+									if strings.Contains(crew.Job, "Producer") {
+										job = "director" // mapping series creators/producers as "directors" for UI simplicity
+									}
+
+									_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+								}
 							}
-
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
-						}
-					}
-				}
-
-				// Fetch Episodes for Season 1
-				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
-				if err == nil {
-					for _, ep := range episodes {
-						epSlug := tmdb.Slugify(ep.Name)
-						if epSlug == "" {
-							epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
-						}
-						epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
-
-						var image string
-						if ep.StillPath != "" {
-							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
 						}
 
-						_, err := DB.Exec(`INSERT INTO tv_episodes 
+						// Fetch Episodes for Season 1
+						episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
+						if err == nil {
+							for _, ep := range episodes {
+								epSlug := tmdb.Slugify(ep.Name)
+								if epSlug == "" {
+									epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
+								}
+								slug := tmdb.Slugify(s.Name)
+								if slug == "" {
+									slug = "show"
+								}
+								epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
+
+								var image string
+								if ep.StillPath != "" {
+									image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
+								}
+
+								_, err := DB.Exec(`INSERT INTO tv_episodes
 							(series_id, season_number, episode_number, name, slug, date_published, description, image, duration) 
 							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-							seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+									seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
 
-						if err != nil {
-							log.Printf("Error inserting episode %s: %v", ep.Name, err)
+								if err != nil {
+									log.Printf("Error inserting episode %s: %v", ep.Name, err)
+								}
+							}
 						}
 					}
 				}
