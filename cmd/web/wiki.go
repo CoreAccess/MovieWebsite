@@ -64,14 +64,5 @@ func (app *application) wikiEditPost(w http.ResponseWriter, r *http.Request) {
 
 	// Redirect back where they came from
 	referer := getSafeReferer(r, "/")
-
-	// Append success query param safely
-	redirectURL := referer
-	if strings.Contains(redirectURL, "?") {
-		redirectURL += "&success=edit_submitted"
-	} else {
-		redirectURL += "?success=edit_submitted"
-	}
-
-	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+	http.Redirect(w, r, referer+"?success=edit_submitted", http.StatusSeeOther)
 }

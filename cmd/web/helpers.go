@@ -184,52 +184,49 @@ func (app *application) render(w http.ResponseWriter, status int, page string, d
 	buf.WriteTo(w)
 }
 
-// isSafeRedirect checks if the URL path is a safe, relative path
-// and does not point to an external domain (e.g. "//evil.com")
+// isSafeRedirect checks if the provided URL path is a safe relative path for a redirect.
+// It mitigates Open Redirect vulnerabilities by ensuring the path starts with a single '/'
+// and not a double slash ('//' or '/\') which browsers interpret as a protocol-relative URL.
 func isSafeRedirect(path string) bool {
-	if path == "" {
+	if len(path) == 0 {
 		return false
 	}
-	// Must start with / and not be followed by another / or \
-	if path[0] == '/' && (len(path) == 1 || (path[1] != '/' && path[1] != '\\')) {
-		return true
+	if path[0] != '/' {
+		return false
 	}
-	return false
+	// Prevent protocol-relative URL bypasses like //malicious.com or /\malicious.com
+	if len(path) > 1 && (path[1] == '/' || path[1] == '\\') {
+		return false
+	}
+	return true
 }
 
-// getSafeReferer safely extracts the relative path and query from the Referer header
-// returning a fallback if the referer is empty or unsafe.
+// getSafeReferer safely extracts the relative path and query from the HTTP Referer header.
+// If the Referer is missing, invalid, or considered unsafe, it returns the provided fallback path.
+// This prevents attackers from constructing malicious links that exploit Referer-based redirects.
 func getSafeReferer(r *http.Request, fallback string) string {
 	referer := r.Header.Get("Referer")
 	if referer == "" {
 		return fallback
 	}
 
+	// Parse the Referer URL
 	u, err := url.Parse(referer)
 	if err != nil {
 		return fallback
 	}
 
-	// Reconstruct the relative URL (path + query string)
-	// If the original URL had a host (e.g. //evil.com), the path might be empty.
-	// We should only consider it safe if it's explicitly a relative path or if we
-	// can safely extract the path. To prevent open redirects, if the host is set
-	// but the path is empty or just "/", we need to ensure the final path is safe.
-	path := u.Path
-	if path == "" {
-		if u.Host != "" || u.Opaque != "" {
-			return fallback
-		}
-		path = "/"
-	}
-
+	// We only want to redirect to the path (and query), dropping the scheme and host.
+	// This ensures we always redirect locally regardless of what the host was.
+	redirectPath := u.Path
 	if u.RawQuery != "" {
-		path += "?" + u.RawQuery
+		redirectPath += "?" + u.RawQuery
 	}
 
-	if !isSafeRedirect(path) {
+	// Even though we extracted the path from url.Parse, we still double-check it
+	if !isSafeRedirect(redirectPath) {
 		return fallback
 	}
 
-	return path
+	return redirectPath
 }

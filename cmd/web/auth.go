@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"movieweb/internal/database"
@@ -194,7 +195,7 @@ func (app *application) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if user == nil {
 			nextParam := ""
 			if r.Method == "GET" && r.URL.Path != "" {
-				nextParam = "?next=" + r.URL.Path
+				nextParam = "?next=" + url.QueryEscape(r.URL.Path)
 			}
 			http.Redirect(w, r, "/login"+nextParam, http.StatusSeeOther)
 			return
