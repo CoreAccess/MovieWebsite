@@ -946,7 +946,9 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				if err == nil {
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
-						if personSlug == "" { personSlug = "person" }
+						if personSlug == "" {
+							personSlug = "person"
+						}
 						var personID int64
 						err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
 						if err != nil {
@@ -957,7 +959,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
 							personID, _ = res.LastInsertId()
 						}
-						
+
 						characterSlug := tmdb.Slugify(cast.Character)
 						if characterSlug == "" {
 							characterSlug = "character"
@@ -968,14 +970,16 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
 							charID, _ = res.LastInsertId()
 						}
-						
+
 						_, _ = DB.Exec("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", movieID, personID, charID, cast.Order)
 					}
-					
+
 					for _, crew := range credits.Crew {
 						if crew.Job == "Director" || crew.Job == "Writer" || crew.Job == "Screenplay" || crew.Job == "Author" {
 							crewSlug := tmdb.Slugify(crew.Name)
-							if crewSlug == "" { crewSlug = "crew" }
+							if crewSlug == "" {
+								crewSlug = "crew"
+							}
 							var personID int64
 							err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
 							if err != nil {
@@ -986,12 +990,12 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
 								personID, _ = res.LastInsertId()
 							}
-							
+
 							job := "writer"
 							if crew.Job == "Director" {
 								job = "director"
 							}
-							
+
 							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
 						}
 					}
@@ -1026,7 +1030,9 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				if err == nil {
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
-						if personSlug == "" { personSlug = "person" }
+						if personSlug == "" {
+							personSlug = "person"
+						}
 						var personID int64
 						err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
 						if err != nil {
@@ -1037,7 +1043,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
 							personID, _ = res.LastInsertId()
 						}
-						
+
 						characterSlug := tmdb.Slugify(cast.Character)
 						if characterSlug == "" {
 							characterSlug = "character"
@@ -1048,14 +1054,16 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
 							charID, _ = res.LastInsertId()
 						}
-						
+
 						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 					}
-					
+
 					for _, crew := range credits.Crew {
 						if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
 							crewSlug := tmdb.Slugify(crew.Name)
-							if crewSlug == "" { crewSlug = "crew" }
+							if crewSlug == "" {
+								crewSlug = "crew"
+							}
 							var personID int64
 							err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
 							if err != nil {
@@ -1066,12 +1074,12 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
 								personID, _ = res.LastInsertId()
 							}
-							
+
 							job := "writer"
 							if strings.Contains(crew.Job, "Producer") {
 								job = "director" // mapping series creators/producers as "directors" for UI simplicity
 							}
-							
+
 							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
 						}
 					}
@@ -1082,9 +1090,11 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				if err == nil {
 					for _, ep := range episodes {
 						epSlug := tmdb.Slugify(ep.Name)
-						if epSlug == "" { epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber) }
+						if epSlug == "" {
+							epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
+						}
 						epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
-						
+
 						var image string
 						if ep.StillPath != "" {
 							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
@@ -1094,7 +1104,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							(series_id, season_number, episode_number, name, slug, date_published, description, image, duration) 
 							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 							seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
-						
+
 						if err != nil {
 							log.Printf("Error inserting episode %s: %v", ep.Name, err)
 						}
@@ -1112,7 +1122,7 @@ func GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
 	} else if sort == "date" {
 		orderBy = "date_published DESC"
 	}
-	
+
 	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -1139,7 +1149,7 @@ func GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) 
 	} else if sort == "date" {
 		orderBy = "start_date DESC"
 	}
-	
+
 	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -1244,7 +1254,7 @@ func GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
 	if sort == "name" {
 		orderBy = "name ASC"
 	}
-	
+
 	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {
@@ -1431,7 +1441,7 @@ func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	var cast []models.CastMember
 	for rows.Next() {
 		var cm models.CastMember
-		// Handle potential NULL images gracefully if needed using sql.NullString, 
+		// Handle potential NULL images gracefully if needed using sql.NullString,
 		// but since we define them as TEXT we can scan directly to string for now.
 		var pImg, cImg sql.NullString
 		err := rows.Scan(
@@ -1454,7 +1464,7 @@ func GetMovieCast(movieID int) ([]models.CastMember, error) {
 // MovieDetail model without having to make multiple separate DB calls itself.
 func GetMovieDetail(id int) (models.MovieDetail, error) {
 	var detail models.MovieDetail
-	
+
 	// First, fetch the core movie information from the 'movies' table.
 	movie, err := GetMovieByID(id)
 	if err != nil {
@@ -1640,7 +1650,7 @@ func GetTVEpisodes(seriesID int) ([]models.TVEpisode, error) {
 // GetTVSeriesDetail fetches a show, its cast, and episodes by ID
 func GetTVSeriesDetail(id int) (models.TVSeriesDetail, error) {
 	var detail models.TVSeriesDetail
-	
+
 	series, err := GetTVSeriesByID(id)
 	if err != nil {
 		return detail, err
@@ -1713,19 +1723,19 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 		var p models.Person
 		var job string
 		var gender sql.NullString // Catch generic DB null fields
-		
+
 		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &gender, &job); err != nil {
 			continue // Skip errors and grab what we can
 		}
 		p.Gender = gender.String
-		
+
 		if job == "director" {
 			directors = append(directors, p)
 		} else if job == "writer" {
 			writers = append(writers, p)
 		}
 	}
-	
+
 	return directors, writers, nil
 }
 

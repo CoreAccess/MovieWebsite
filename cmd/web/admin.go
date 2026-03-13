@@ -2,8 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
-	"log"
 	"net/http"
 
 	"movieweb/internal/database"
@@ -11,14 +9,14 @@ import (
 
 // adminRoleCheck is a middleware that restricts access to admin-only routes.
 // It retrieves the authenticated user from the request context and verifies their role.
-func adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
+func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Data Flow Trace:
 		// 1. sessionMiddleware (in cmd/web/auth.go) extracts the session cookie.
 		// 2. It looks up the session in the database and retrieves the User.
 		// 3. The User object is stored in the request's Context.
-		// 4. getUser(r) retrieves that User object from the Context.
-		user := getUser(r)
+		// 4. app.getUser(r) retrieves that User object from the Context.
+		user := app.getUser(r)
 
 		// If no user is found in the context, it means the request is unauthenticated.
 		// We redirect them to the login page to establish a session.
@@ -44,23 +42,10 @@ func adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // adminDashboardView renders the global management interface
-func adminDashboardView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/partials/sidebar.tmpl",
-		"./ui/html/pages/admin.html",
-	}
+func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Request) {
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
+	data := app.getTemplateData("Admin Dashboard", r)
 
-	data := getTemplateData("Admin Dashboard", r)
-	
 	// Fast counting logic for MVP metrics
 	var userCount, mediaCount, pendingEdits, activeAds int
 	database.DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
@@ -77,14 +62,11 @@ func adminDashboardView(w http.ResponseWriter, r *http.Request) {
 	suggestions, _ := database.GetPendingWikiEdits()
 	data.EditSuggestions = suggestions
 
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-	}
+	app.render(w, http.StatusOK, "admin.html", data)
 }
 
 // wikiApprovePost handles approving an edit
-func wikiApprovePost(w http.ResponseWriter, r *http.Request) {
+func (app *application) wikiApprovePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil || r.PostForm.Get("suggestion_id") == "" {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
@@ -99,7 +81,7 @@ func wikiApprovePost(w http.ResponseWriter, r *http.Request) {
 }
 
 // wikiRejectPost handles rejecting an edit
-func wikiRejectPost(w http.ResponseWriter, r *http.Request) {
+func (app *application) wikiRejectPost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil || r.PostForm.Get("suggestion_id") == "" {
 		http.Error(w, "Bad Request", http.StatusBadRequest)
