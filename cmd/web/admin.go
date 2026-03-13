@@ -9,21 +9,36 @@ import (
 	"movieweb/internal/database"
 )
 
-// adminRoleCheck is a simple middleware to ensure only Admins can access routes
+// adminRoleCheck is a middleware that restricts access to admin-only routes.
+// It retrieves the authenticated user from the request context and verifies their role.
 func adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		// Data Flow Trace:
+		// 1. sessionMiddleware (in cmd/web/auth.go) extracts the session cookie.
+		// 2. It looks up the session in the database and retrieves the User.
+		// 3. The User object is stored in the request's Context.
+		// 4. getUser(r) retrieves that User object from the Context.
 		user := getUser(r)
-		
-		// For MVP, just block completely if not logged in
+
+		// If no user is found in the context, it means the request is unauthenticated.
+		// We redirect them to the login page to establish a session.
 		if user == nil {
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 
-		// In a real app we would check user.Role == "admin"
-		// For this MVP, we assume any authenticated user hitting /admin wants to see it
-		// This should be locked down before going to production!
-		
+		// Security Fix: Explicitly check the user's role.
+		// We only allow users with the 'admin' role to proceed to administrative functions.
+		// This prevents regular users or moderators from accessing the admin dashboard
+		// and performing sensitive actions like approving/rejecting wiki edits.
+		if user.Role != "admin" {
+			// If the user is authenticated but doesn't have the required role,
+			// we return a 403 Forbidden status code.
+			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+			return
+		}
+
+		// If the user is an admin, we call the next handler in the chain.
 		next.ServeHTTP(w, r)
 	}
 }
