@@ -10,14 +10,29 @@ import (
 )
 
 type Client struct {
-	apiKey string
+	token  string
+	isV4   bool
 	client *http.Client
 }
 
-func NewClient(apiKey string) *Client {
+func NewClient(token string) *Client {
+	// TMDB v3 keys are 32 chars, v4 Access Tokens are much longer (JWT-like)
+	isV4 := len(token) > 100 
 	return &Client{
-		apiKey: apiKey,
+		token:  token,
+		isV4:   isV4,
 		client: &http.Client{Timeout: 10 * time.Second},
+	}
+}
+
+func (c *Client) authenticateRequest(req *http.Request) {
+	req.Header.Add("accept", "application/json")
+	if c.isV4 {
+		req.Header.Add("Authorization", "Bearer "+c.token)
+	} else {
+		q := req.URL.Query()
+		q.Add("api_key", c.token)
+		req.URL.RawQuery = q.Encode()
 	}
 }
 
@@ -35,12 +50,14 @@ type TrendingMoviesResponse struct {
 }
 
 type TMDBMovie struct {
-	ID          int     `json:"id"`
-	Title       string  `json:"title"`
-	Overview    string  `json:"overview"`
-	ReleaseDate string  `json:"release_date"`
-	PosterPath  string  `json:"poster_path"`
-	VoteAverage float64 `json:"vote_average"`
+	ID               int     `json:"id"`
+	Title            string  `json:"title"`
+	Overview         string  `json:"overview"`
+	ReleaseDate      string  `json:"release_date"`
+	PosterPath       string  `json:"poster_path"`
+	VoteAverage      float64 `json:"vote_average"`
+	OriginalLanguage string  `json:"original_language"`
+	GenreIDs         []int   `json:"genre_ids"`
 }
 
 type TrendingTVResponse struct {
@@ -48,12 +65,14 @@ type TrendingTVResponse struct {
 }
 
 type TMDBTV struct {
-	ID           int     `json:"id"`
-	Name         string  `json:"name"`
-	Overview     string  `json:"overview"`
-	FirstAirDate string  `json:"first_air_date"`
-	PosterPath   string  `json:"poster_path"`
-	VoteAverage  float64 `json:"vote_average"`
+	ID               int     `json:"id"`
+	Name             string  `json:"name"`
+	Overview         string  `json:"overview"`
+	FirstAirDate     string  `json:"first_air_date"`
+	PosterPath       string  `json:"poster_path"`
+	VoteAverage      float64 `json:"vote_average"`
+	OriginalLanguage string  `json:"original_language"`
+	GenreIDs         []int   `json:"genre_ids"`
 }
 
 type CreditsResponse struct {
@@ -93,10 +112,62 @@ type TMDBEpisode struct {
 	Runtime       int    `json:"runtime"`
 }
 
+type TMDBGenreResponse struct {
+	Genres []TMDBGenre `json:"genres"`
+}
+
+type TMDBGenre struct {
+	ID   int    `json:"id"`
+	Name string `json:"name"`
+}
+
+func (c *Client) FetchMovieGenres() ([]TMDBGenre, error) {
+	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/movie/list?language=en", nil)
+	c.authenticateRequest(req)
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %s", res.Status)
+	}
+
+	var data TMDBGenreResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	return data.Genres, nil
+}
+
+func (c *Client) FetchTVGenres() ([]TMDBGenre, error) {
+	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/tv/list?language=en", nil)
+	c.authenticateRequest(req)
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("TMDB API error: %s", res.Status)
+	}
+
+	var data TMDBGenreResponse
+	if err := json.NewDecoder(res.Body).Decode(&data); err != nil {
+		return nil, err
+	}
+
+	return data.Genres, nil
+}
+
 func (c *Client) FetchTrendingMovies() ([]TMDBMovie, error) {
 	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/trending/movie/week?language=en-US", nil)
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -123,8 +194,7 @@ func (c *Client) FetchTrendingMovies() ([]TMDBMovie, error) {
 
 func (c *Client) FetchTrendingShows() ([]TMDBTV, error) {
 	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/trending/tv/week?language=en-US", nil)
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -151,8 +221,7 @@ func (c *Client) FetchTrendingShows() ([]TMDBTV, error) {
 
 func (c *Client) FetchMovieCredits(movieID int) (CreditsResponse, error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/movie/%d/credits?language=en-US", movieID), nil)
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -179,8 +248,7 @@ func (c *Client) FetchMovieCredits(movieID int) (CreditsResponse, error) {
 
 func (c *Client) FetchTVCredits(seriesID int) (CreditsResponse, error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/tv/%d/credits?language=en-US", seriesID), nil)
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
@@ -207,8 +275,7 @@ func (c *Client) FetchTVCredits(seriesID int) (CreditsResponse, error) {
 
 func (c *Client) FetchTVSeasonEpisodes(seriesID int, seasonNumber int) ([]TMDBEpisode, error) {
 	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/tv/%d/season/%d?language=en-US", seriesID, seasonNumber), nil)
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", "Bearer "+c.apiKey)
+	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
 	if err != nil {
