@@ -1751,20 +1751,6 @@ func GetPersonBySlug(slug string) (models.Person, error) {
 	return p, err
 }
 
-// GetPersonDetail fetches a person profile
-func GetPersonDetail(slug string) (models.PersonDetail, error) {
-	var detail models.PersonDetail
-	person, err := GetPersonBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Person = person
-	movies, _ := GetPersonMovies(person.ID)
-	shows, _ := GetPersonShows(person.ID)
-	detail.Movies = movies
-	detail.Shows = shows
-	return detail, nil
-}
 
 // GetPersonByID fetches a single person
 func GetPersonByID(id int) (models.Person, error) {
