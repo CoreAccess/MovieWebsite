@@ -1038,6 +1038,10 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
 						}
 					}
+					if len(crewParams) > 0 {
+						crewQuery := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ", "))
+						_, _ = DB.Exec(crewQuery, crewParams...)
+					}
 				}
 			}
 		}
