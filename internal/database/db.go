@@ -79,7 +79,9 @@ func createTables() {
 		image TEXT,
 		logo TEXT,
 		url TEXT,
-		founding_date TEXT
+		founding_date TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 	);
 
 	CREATE TABLE IF NOT EXISTS people (
@@ -93,9 +95,19 @@ func createTables() {
 		height TEXT,
 		description TEXT,
 		image TEXT,
-		also_known_as TEXT,
-		awards TEXT,
-		knows_language TEXT
+		knows_language TEXT,
+		nationality_code TEXT,
+		known_for_department TEXT,
+		popularity_score REAL DEFAULT 0.0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(nationality_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS person_aliases (
+		person_id INTEGER NOT NULL,
+		alias TEXT NOT NULL,
+		FOREIGN KEY(person_id) REFERENCES people(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS characters (
@@ -106,7 +118,39 @@ func createTables() {
 		birth_date TEXT,
 		death_date TEXT,
 		description TEXT,
-		image TEXT
+		image TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS genres (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		slug TEXT NOT NULL UNIQUE
+	);
+
+	CREATE TABLE IF NOT EXISTS keywords (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		slug TEXT NOT NULL UNIQUE
+	);
+
+	CREATE TABLE IF NOT EXISTS languages (
+		code TEXT PRIMARY KEY,
+		name TEXT NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS countries (
+		code TEXT PRIMARY KEY,
+		name TEXT NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS external_ids (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		source TEXT NOT NULL,
+		external_id TEXT NOT NULL,
+		UNIQUE (media_type, media_id, source)
 	);
 
 	CREATE TABLE IF NOT EXISTS movies (
@@ -121,13 +165,38 @@ func createTables() {
 		content_rating TEXT,
 		duration INTEGER,
 		aggregate_rating REAL,
-		genre JSON,
 		budget TEXT,
 		box_office TEXT,
-		in_language TEXT,
-		production_company TEXT,
-		keywords TEXT,
-		UNIQUE(name, date_published)
+		language_code TEXT,
+		country_code TEXT,
+		tagline TEXT,
+		rating_count INTEGER DEFAULT 0,
+		review_count INTEGER DEFAULT 0,
+		best_rating REAL DEFAULT 10.0,
+		worst_rating REAL DEFAULT 1.0,
+		is_family_friendly BOOLEAN DEFAULT 0,
+		subtitle TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(name, date_published),
+		FOREIGN KEY(language_code) REFERENCES languages(code),
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS movie_genres (
+		movie_id INTEGER NOT NULL,
+		genre_id INTEGER NOT NULL,
+		PRIMARY KEY(movie_id, genre_id),
+		FOREIGN KEY(movie_id) REFERENCES movies(id),
+		FOREIGN KEY(genre_id) REFERENCES genres(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS movie_keywords (
+		movie_id INTEGER NOT NULL,
+		keyword_id INTEGER NOT NULL,
+		PRIMARY KEY(movie_id, keyword_id),
+		FOREIGN KEY(movie_id) REFERENCES movies(id),
+		FOREIGN KEY(keyword_id) REFERENCES keywords(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS tv_series (
@@ -143,10 +212,35 @@ func createTables() {
 		number_of_seasons INTEGER,
 		number_of_episodes INTEGER,
 		trailer TEXT,
-		genre JSON,
-		production_company TEXT,
-		in_language TEXT,
-		UNIQUE(name, start_date)
+		language_code TEXT,
+		country_code TEXT,
+		tagline TEXT,
+		rating_count INTEGER DEFAULT 0,
+		review_count INTEGER DEFAULT 0,
+		best_rating REAL DEFAULT 10.0,
+		worst_rating REAL DEFAULT 1.0,
+		subtitle TEXT,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE(name, start_date),
+		FOREIGN KEY(language_code) REFERENCES languages(code),
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS tv_genres (
+		series_id INTEGER NOT NULL,
+		genre_id INTEGER NOT NULL,
+		PRIMARY KEY(series_id, genre_id),
+		FOREIGN KEY(series_id) REFERENCES tv_series(id),
+		FOREIGN KEY(genre_id) REFERENCES genres(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS tv_keywords (
+		series_id INTEGER NOT NULL,
+		keyword_id INTEGER NOT NULL,
+		PRIMARY KEY(series_id, keyword_id),
+		FOREIGN KEY(series_id) REFERENCES tv_series(id),
+		FOREIGN KEY(keyword_id) REFERENCES keywords(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS tv_episodes (
@@ -288,7 +382,9 @@ func createTables() {
 		user_id INTEGER NOT NULL,
 		entity_type TEXT NOT NULL,
 		entity_id INTEGER NOT NULL,
-		changes TEXT NOT NULL,
+		field TEXT NOT NULL,
+		old_value TEXT,
+		new_value TEXT,
 		approved BOOLEAN DEFAULT 0,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES users(id)
@@ -309,11 +405,17 @@ func createTables() {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		company_id INTEGER NOT NULL,
 		budget REAL DEFAULT 0.0,
-		target_pages TEXT, -- JSON
 		impressions INTEGER DEFAULT 0,
 		clicks INTEGER DEFAULT 0,
 		start_date TIMESTAMP,
 		end_date TIMESTAMP
+	);
+
+	CREATE TABLE IF NOT EXISTS campaign_targets (
+		campaign_id INTEGER NOT NULL,
+		page_slug TEXT NOT NULL,
+		PRIMARY KEY(campaign_id, page_slug),
+		FOREIGN KEY(campaign_id) REFERENCES ad_campaigns(id)
 	);
 
 	CREATE TABLE IF NOT EXISTS advertisements (
@@ -330,6 +432,8 @@ func createTables() {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		user_id INTEGER NOT NULL,
 		content TEXT NOT NULL,
+		media_type TEXT,
+		media_id INTEGER,
 		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY(user_id) REFERENCES users(id)
 	);
@@ -356,8 +460,410 @@ func createTables() {
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		post_id INTEGER NOT NULL,
 		question TEXT NOT NULL,
-		options TEXT NOT NULL, -- JSON
 		FOREIGN KEY(post_id) REFERENCES posts(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS poll_options (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		poll_id INTEGER NOT NULL,
+		option_text TEXT NOT NULL,
+		FOREIGN KEY(poll_id) REFERENCES polls(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS poll_votes (
+		user_id INTEGER NOT NULL,
+		option_id INTEGER NOT NULL,
+		voted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY(user_id, option_id),
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(option_id) REFERENCES poll_options(id)
+	);
+
+	-- Tier 2 - Structural Improvements (New Tables)
+	CREATE TABLE IF NOT EXISTS reviews (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		rating REAL NOT NULL,
+		title TEXT,
+		body TEXT,
+		positive_notes TEXT,
+		negative_notes TEXT,
+		contains_spoilers BOOLEAN DEFAULT 0,
+		review_type TEXT DEFAULT 'user',
+		publication_name TEXT,
+		external_review_url TEXT,
+		status TEXT DEFAULT 'published',
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE (user_id, media_type, media_id),
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS rating_demographics (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		age_group TEXT NOT NULL,
+		avg_rating REAL,
+		vote_count INTEGER,
+		UNIQUE (media_type, media_id, age_group)
+	);
+
+	CREATE TABLE IF NOT EXISTS media_images (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		image_type TEXT NOT NULL,
+		url TEXT NOT NULL,
+		is_primary BOOLEAN DEFAULT 0,
+		source TEXT,
+		language_code TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS source_material (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT NOT NULL,
+		source_type TEXT NOT NULL,
+		author_id INTEGER,
+		year INTEGER,
+		FOREIGN KEY(author_id) REFERENCES people(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS movie_source_material (
+		movie_id INTEGER NOT NULL,
+		source_id INTEGER NOT NULL,
+		PRIMARY KEY(movie_id, source_id),
+		FOREIGN KEY(movie_id) REFERENCES movies(id),
+		FOREIGN KEY(source_id) REFERENCES source_material(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS tv_source_material (
+		series_id INTEGER NOT NULL,
+		source_id INTEGER NOT NULL,
+		PRIMARY KEY(series_id, source_id),
+		FOREIGN KEY(series_id) REFERENCES tv_series(id),
+		FOREIGN KEY(source_id) REFERENCES source_material(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS award_bodies (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE,
+		slug TEXT NOT NULL UNIQUE,
+		website_url TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS award_ceremonies (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		body_id INTEGER NOT NULL,
+		year INTEGER,
+		ceremony_number INTEGER,
+		date_held DATE,
+		FOREIGN KEY(body_id) REFERENCES award_bodies(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS award_categories (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		ceremony_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		department TEXT,
+		FOREIGN KEY(ceremony_id) REFERENCES award_ceremonies(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS award_nominations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		category_id INTEGER NOT NULL,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		person_id INTEGER,
+		won BOOLEAN DEFAULT 0,
+		nominee_note TEXT,
+		FOREIGN KEY(category_id) REFERENCES award_categories(id),
+		FOREIGN KEY(person_id) REFERENCES people(id)
+	);
+
+	-- Tier 3 - New Entities
+	CREATE TABLE IF NOT EXISTS tv_seasons (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		series_id INTEGER NOT NULL,
+		season_number INTEGER NOT NULL,
+		name TEXT,
+		description TEXT,
+		image TEXT,
+		date_published TEXT,
+		episode_count INTEGER,
+		aggregate_rating REAL,
+		UNIQUE (series_id, season_number),
+		FOREIGN KEY(series_id) REFERENCES tv_series(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS movie_series (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,
+		slug TEXT UNIQUE NOT NULL,
+		description TEXT,
+		image TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS movie_series_entries (
+		series_id INTEGER NOT NULL,
+		movie_id INTEGER NOT NULL,
+		position INTEGER,
+		PRIMARY KEY(series_id, movie_id),
+		FOREIGN KEY(series_id) REFERENCES movie_series(id),
+		FOREIGN KEY(movie_id) REFERENCES movies(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS quotations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		person_id INTEGER,
+		character_id INTEGER,
+		quote_text TEXT NOT NULL,
+		scene_context TEXT,
+		submitted_by INTEGER NOT NULL,
+		status TEXT DEFAULT 'published',
+		FOREIGN KEY(person_id) REFERENCES people(id),
+		FOREIGN KEY(character_id) REFERENCES characters(id),
+		FOREIGN KEY(submitted_by) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS screening_events (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		event_type TEXT,
+		event_name TEXT,
+		location TEXT,
+		event_date DATE,
+		description TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS networks (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,
+		slug TEXT UNIQUE NOT NULL,
+		network_type TEXT,
+		country_code TEXT,
+		logo_url TEXT,
+		website_url TEXT,
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS tv_networks (
+		series_id INTEGER NOT NULL,
+		network_id INTEGER NOT NULL,
+		PRIMARY KEY(series_id, network_id),
+		FOREIGN KEY(series_id) REFERENCES tv_series(id),
+		FOREIGN KEY(network_id) REFERENCES networks(id)
+	);
+
+	-- Tier 4 - Competitive Features
+	CREATE TABLE IF NOT EXISTS streaming_providers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,
+		logo_url TEXT,
+		website_url TEXT,
+		affiliate_url TEXT,
+		provider_type TEXT,
+		has_affiliate_program BOOLEAN DEFAULT 0
+	);
+
+	CREATE TABLE IF NOT EXISTS media_availability (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		provider_id INTEGER NOT NULL,
+		country_code TEXT NOT NULL,
+		availability_type TEXT,
+		available_from DATE,
+		available_until DATE,
+		UNIQUE (media_type, media_id, provider_id, country_code),
+		FOREIGN KEY(provider_id) REFERENCES streaming_providers(id),
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS release_dates (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		country_code TEXT NOT NULL,
+		release_date DATE NOT NULL,
+		release_type TEXT,
+		certification TEXT,
+		notes TEXT,
+		UNIQUE (media_type, media_id, country_code, release_type),
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS filming_locations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		location_name TEXT NOT NULL,
+		country_code TEXT,
+		latitude REAL,
+		longitude REAL,
+		description TEXT,
+		is_real_world BOOLEAN DEFAULT 1,
+		FOREIGN KEY(country_code) REFERENCES countries(code)
+	);
+
+	CREATE TABLE IF NOT EXISTS technical_specs (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		color_type TEXT,
+		aspect_ratio TEXT,
+		sound_mix TEXT,
+		negative_format TEXT,
+		camera TEXT,
+		runtime_minutes INTEGER,
+		UNIQUE (media_type, media_id)
+	);
+
+	CREATE TABLE IF NOT EXISTS content_advisory (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		category TEXT,
+		severity_level TEXT,
+		notes TEXT,
+		submitted_by INTEGER NOT NULL,
+		status TEXT DEFAULT 'published',
+		FOREIGN KEY(submitted_by) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS social_links (
+		entity_type TEXT NOT NULL,
+		entity_id INTEGER NOT NULL,
+		platform TEXT NOT NULL,
+		url TEXT NOT NULL,
+		username TEXT,
+		UNIQUE (entity_type, entity_id, platform)
+	);
+
+	CREATE TABLE IF NOT EXISTS popularity_snapshots (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		snapshot_date DATE NOT NULL,
+		popularity_score REAL,
+		rank_position INTEGER,
+		UNIQUE (media_type, media_id, snapshot_date)
+	);
+
+	CREATE TABLE IF NOT EXISTS episode_cast (
+		episode_id INTEGER NOT NULL,
+		person_id INTEGER NOT NULL,
+		character_id INTEGER,
+		billing_order INTEGER,
+		credit_type TEXT DEFAULT 'regular',
+		PRIMARY KEY (episode_id, person_id, character_id),
+		FOREIGN KEY(episode_id) REFERENCES tv_episodes(id),
+		FOREIGN KEY(person_id) REFERENCES people(id),
+		FOREIGN KEY(character_id) REFERENCES characters(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS user_lists (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		description TEXT,
+		is_ranked BOOLEAN DEFAULT 0,
+		is_public BOOLEAN DEFAULT 1,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS user_list_items (
+		list_id INTEGER NOT NULL,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		position INTEGER,
+		note TEXT,
+		added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE (list_id, media_type, media_id),
+		FOREIGN KEY(list_id) REFERENCES user_lists(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS watch_history (
+		user_id INTEGER NOT NULL,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		rewatch_count INTEGER DEFAULT 0,
+		quick_rating REAL,
+		UNIQUE (user_id, media_type, media_id),
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS episode_watch_history (
+		user_id INTEGER NOT NULL,
+		episode_id INTEGER NOT NULL,
+		watched_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		UNIQUE (user_id, episode_id),
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(episode_id) REFERENCES tv_episodes(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS user_follows (
+		follower_id INTEGER NOT NULL,
+		followed_id INTEGER NOT NULL,
+		followed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (follower_id, followed_id),
+		FOREIGN KEY(follower_id) REFERENCES users(id),
+		FOREIGN KEY(followed_id) REFERENCES users(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS moods (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT UNIQUE NOT NULL,
+		emoji TEXT,
+		description TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS media_moods (
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		mood_id INTEGER NOT NULL,
+		vote_count INTEGER DEFAULT 0,
+		PRIMARY KEY (media_type, media_id, mood_id),
+		FOREIGN KEY(mood_id) REFERENCES moods(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS user_mood_votes (
+		user_id INTEGER NOT NULL,
+		media_type TEXT NOT NULL,
+		media_id INTEGER NOT NULL,
+		mood_id INTEGER NOT NULL,
+		PRIMARY KEY (user_id, media_type, media_id, mood_id),
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(mood_id) REFERENCES moods(id)
+	);
+
+	CREATE TABLE IF NOT EXISTS on_this_day_events (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		month INTEGER NOT NULL,
+		day INTEGER NOT NULL,
+		entity_type TEXT NOT NULL,
+		entity_id INTEGER NOT NULL,
+		event_type TEXT NOT NULL,
+		year INTEGER,
+		description TEXT
+	);
+
+	CREATE TABLE IF NOT EXISTS notifications (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		user_id INTEGER NOT NULL,
+		type TEXT NOT NULL,
+		actor_id INTEGER,
+		entity_type TEXT,
+		entity_id INTEGER,
+		message TEXT,
+		link TEXT,
+		is_read BOOLEAN DEFAULT 0,
+		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(user_id) REFERENCES users(id),
+		FOREIGN KEY(actor_id) REFERENCES users(id)
 	);
 	`
 
@@ -396,6 +902,23 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 
 		client := tmdb.NewClient(tmdbAPIKey)
 		
+		// Pre-seed genres
+		mGenres, err := client.FetchMovieGenres()
+		if err == nil {
+			for _, g := range mGenres {
+				_, _ = DB.Exec("INSERT OR IGNORE INTO genres (id, name, slug) VALUES (?, ?, ?)", g.ID, g.Name, tmdb.Slugify(g.Name))
+			}
+		}
+		tGenres, err := client.FetchTVGenres()
+		if err == nil {
+			for _, g := range tGenres {
+				_, _ = DB.Exec("INSERT OR IGNORE INTO genres (id, name, slug) VALUES (?, ?, ?)", g.ID, g.Name, tmdb.Slugify(g.Name))
+			}
+		}
+
+		// Pre-seed languages (basic set for testing)
+		_, _ = DB.Exec("INSERT OR IGNORE INTO languages (code, name) VALUES ('en', 'English'), ('ja', 'Japanese'), ('ko', 'Korean'), ('es', 'Spanish'), ('fr', 'French')")
+
 		// 2. Fetch and Seed Movies
 		movies, err := client.FetchTrendingMovies()
 		if err != nil {
@@ -404,13 +927,19 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 			for _, m := range movies {
 				slug := tmdb.Slugify(m.Title)
 				if slug == "" { slug = "movie" }
-				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, genre) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, "[]")
+				langCode := m.OriginalLanguage
+				if langCode == "" { langCode = "en" }
+				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
+					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, langCode)
 				if err != nil {
 					log.Printf("Error inserting movie %s: %v", m.Title, err)
 					continue
 				}
 				movieID, _ := res.LastInsertId()
+
+				for _, gID := range m.GenreIDs {
+					_, _ = DB.Exec("INSERT INTO movie_genres (movie_id, genre_id) VALUES (?, ?)", movieID, gID)
+				}
 
 				// Fetch Credits
 				credits, err := client.FetchMovieCredits(m.ID)
@@ -478,13 +1007,19 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 			for _, s := range shows {
 				slug := tmdb.Slugify(s.Name)
 				if slug == "" { slug = "show" }
-				res, err := DB.Exec("INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, genre) VALUES (?, ?, ?, ?, ?, ?, ?)", 
-					s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, "[]")
+				langCode := s.OriginalLanguage
+				if langCode == "" { langCode = "en" }
+				res, err := DB.Exec("INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
+					s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
 				if err != nil {
 					log.Printf("Error inserting show %s: %v", s.Name, err)
 					continue
 				}
 				seriesID, _ := res.LastInsertId()
+
+				for _, gID := range s.GenreIDs {
+					_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
+				}
 
 				// Fetch Credits
 				credits, err := client.FetchTVCredits(s.ID)
@@ -810,30 +1345,67 @@ func GetAllUsers(limit int, offset int) ([]models.User, error) {
 }
 
 // GetMovieByID fetches a single movie by ID
+// GetMovieGenres fetches genres for a specific movie
+func GetMovieGenres(movieID int) ([]models.Genre, error) {
+	query := `
+		SELECT g.id, g.name, g.slug
+		FROM genres g
+		JOIN movie_genres mg ON g.id = mg.genre_id
+		WHERE mg.movie_id = ?
+	`
+	rows, err := DB.Query(query, movieID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var genres []models.Genre
+	for rows.Next() {
+		var g models.Genre
+		if err := rows.Scan(&g.ID, &g.Name, &g.Slug); err != nil {
+			return nil, err
+		}
+		genres = append(genres, g)
+	}
+	return genres, nil
+}
+
 func GetMovieByID(id int) (models.Movie, error) {
 	var m models.Movie
-	var budget, boxOffice, inLanguage, productionCompany, keywords sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(in_language, ''), COALESCE(production_company, ''), COALESCE(keywords, '') FROM movies WHERE id = ?", id).
-		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &inLanguage, &productionCompany, &keywords)
+	var budget, boxOffice, langCode, countryCode, tagline, subtitle sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, is_family_friendly, COALESCE(subtitle, '') FROM movies WHERE id = ?", id).
+		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
 	m.Budget = budget.String
 	m.BoxOffice = boxOffice.String
-	m.InLanguage = inLanguage.String
-	m.ProductionCompany = productionCompany.String
-	m.Keywords = keywords.String
+	m.LanguageCode = langCode.String
+	m.CountryCode = countryCode.String
+	m.Tagline = tagline.String
+	m.Subtitle = subtitle.String
+
+	// Fetch genres
+	genres, _ := GetMovieGenres(m.ID)
+	m.Genres = genres
+
 	return m, err
 }
 
 // GetMovieBySlug fetches a single movie by its slug
 func GetMovieBySlug(slug string) (models.Movie, error) {
 	var m models.Movie
-	var budget, boxOffice, inLanguage, productionCompany, keywords sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(in_language, ''), COALESCE(production_company, ''), COALESCE(keywords, '') FROM movies WHERE slug = ?", slug).
-		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &inLanguage, &productionCompany, &keywords)
+	var budget, boxOffice, langCode, countryCode, tagline, subtitle sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, is_family_friendly, COALESCE(subtitle, '') FROM movies WHERE slug = ?", slug).
+		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
 	m.Budget = budget.String
 	m.BoxOffice = boxOffice.String
-	m.InLanguage = inLanguage.String
-	m.ProductionCompany = productionCompany.String
-	m.Keywords = keywords.String
+	m.LanguageCode = langCode.String
+	m.CountryCode = countryCode.String
+	m.Tagline = tagline.String
+	m.Subtitle = subtitle.String
+
+	// Fetch genres
+	genres, _ := GetMovieGenres(m.ID)
+	m.Genres = genres
+
 	return m, err
 }
 
@@ -937,24 +1509,61 @@ func GetMovieDetailBySlug(slug string) (models.MovieDetail, error) {
 }
 
 // GetTVSeriesByID fetches a single TV show by ID
+// GetTVSeriesGenres fetches genres for a specific TV show
+func GetTVSeriesGenres(seriesID int) ([]models.Genre, error) {
+	query := `
+		SELECT g.id, g.name, g.slug
+		FROM genres g
+		JOIN tv_genres tg ON g.id = tg.genre_id
+		WHERE tg.series_id = ?
+	`
+	rows, err := DB.Query(query, seriesID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var genres []models.Genre
+	for rows.Next() {
+		var g models.Genre
+		if err := rows.Scan(&g.ID, &g.Name, &g.Slug); err != nil {
+			return nil, err
+		}
+		genres = append(genres, g)
+	}
+	return genres, nil
+}
+
 func GetTVSeriesByID(id int) (models.TVSeries, error) {
 	var s models.TVSeries
-	var prodCo, inLang sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(production_company, ''), COALESCE(in_language, '') FROM tv_series WHERE id = ?", id).
-		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &prodCo, &inLang)
-	s.ProductionCompany = prodCo.String
-	s.InLanguage = inLang.String
+	var langCode, countryCode, tagline, subtitle sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE id = ?", id).
+		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
+	s.LanguageCode = langCode.String
+	s.CountryCode = countryCode.String
+	s.Tagline = tagline.String
+	s.Subtitle = subtitle.String
+
+	genres, _ := GetTVSeriesGenres(s.ID)
+	s.Genres = genres
+
 	return s, err
 }
 
 // GetTVSeriesBySlug fetches a single TV show by its slug
 func GetTVSeriesBySlug(slug string) (models.TVSeries, error) {
 	var s models.TVSeries
-	var prodCo, inLang sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(production_company, ''), COALESCE(in_language, '') FROM tv_series WHERE slug = ?", slug).
-		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &prodCo, &inLang)
-	s.ProductionCompany = prodCo.String
-	s.InLanguage = inLang.String
+	var langCode, countryCode, tagline, subtitle sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE slug = ?", slug).
+		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
+	s.LanguageCode = langCode.String
+	s.CountryCode = countryCode.String
+	s.Tagline = tagline.String
+	s.Subtitle = subtitle.String
+
+	genres, _ := GetTVSeriesGenres(s.ID)
+	s.Genres = genres
+
 	return s, err
 }
 
@@ -1123,12 +1732,12 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 // GetPersonBySlug fetches a single person
 func GetPersonBySlug(slug string) (models.Person, error) {
 	var p models.Person
-	var aka, awards, knowsLang sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(also_known_as, ''), COALESCE(awards, ''), COALESCE(knows_language, '') FROM people WHERE slug = ?", slug).
-		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &aka, &awards, &knowsLang)
-	p.AlsoKnownAs = aka.String
-	p.Awards = awards.String
+	var knowsLang, natCode, dept sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), popularity_score FROM people WHERE slug = ?", slug).
+		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
 	p.KnowsLanguage = knowsLang.String
+	p.NationalityCode = natCode.String
+	p.KnownForDepartment = dept.String
 	return p, err
 }
 
@@ -1150,12 +1759,12 @@ func GetPersonDetail(slug string) (models.PersonDetail, error) {
 // GetPersonByID fetches a single person
 func GetPersonByID(id int) (models.Person, error) {
 	var p models.Person
-	var aka, awards, knowsLang sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(also_known_as, ''), COALESCE(awards, ''), COALESCE(knows_language, '') FROM people WHERE id = ?", id).
-		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &aka, &awards, &knowsLang)
-	p.AlsoKnownAs = aka.String
-	p.Awards = awards.String
+	var knowsLang, natCode, dept sql.NullString
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), popularity_score FROM people WHERE id = ?", id).
+		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
 	p.KnowsLanguage = knowsLang.String
+	p.NationalityCode = natCode.String
+	p.KnownForDepartment = dept.String
 	return p, err
 }
 
