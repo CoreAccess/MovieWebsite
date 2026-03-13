@@ -48,10 +48,14 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 
 	// Fast counting logic for MVP metrics
 	var userCount, mediaCount, pendingEdits, activeAds int
-	database.DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
-	database.DB.QueryRow("SELECT (SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM tv_series)").Scan(&mediaCount)
-	database.DB.QueryRow("SELECT COUNT(*) FROM edit_suggestions WHERE status = 'pending'").Scan(&pendingEdits)
-	database.DB.QueryRow("SELECT COUNT(*) FROM ad_campaigns").Scan(&activeAds)
+	query := `
+		SELECT
+			(SELECT COUNT(*) FROM users),
+			(SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM tv_series),
+			(SELECT COUNT(*) FROM edit_suggestions WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM ad_campaigns)
+	`
+	database.DB.QueryRow(query).Scan(&userCount, &mediaCount, &pendingEdits, &activeAds)
 
 	data.UserCount = userCount
 	data.MediaCount = mediaCount
