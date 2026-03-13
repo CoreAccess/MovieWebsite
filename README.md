@@ -33,7 +33,7 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
 ### Prerequisites
 
 - [Go](https://golang.org/dl/) 1.26 or later.
-- A valid TMDB API key (configured in `cmd/web/main.go` or via environment variables).
+- A valid TMDB API key (configured via the `TMDB_API_KEY` environment variable).
 
 ### Running the Application
 
@@ -53,9 +53,14 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
    go run ./cmd/web
    ```
 
-4. The server will start on `http://localhost:8080` by default. You can override the port by setting the `PORT` environment variable:
+5. (Important) Set your TMDB API Read Access Token as an environment variable to avoid 401 errors:
+   - On Windows (PowerShell): `$env:TMDB_API_KEY="your_token_here"`
+   - On Windows (CMD): `set TMDB_API_KEY=your_token_here`
+   - On Linux/macOS: `export TMDB_API_KEY="your_token_here"`
+
+6. The server will start on `http://localhost:8080` by default. You can override the port by setting the `PORT` environment variable:
    ```bash
-   PORT=9000 go run ./cmd/web
+   PORT=9000 TMDB_API_KEY="your_token_here" go run ./cmd/web
    ```
 
 ## Future Roadmap

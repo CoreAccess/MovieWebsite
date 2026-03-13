@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 
+	"movieweb/internal/config"
 	"movieweb/internal/database"
 	"movieweb/internal/models"
 	"movieweb/internal/monetization"
@@ -52,9 +53,21 @@ type templateData struct {
 // main is the entry point of the application. It initializes the database, sets up the router (mux),
 // configures routes for serving static files and handling various HTTP requests, and starts the web server.
 func main() {
+	// Load environment variables from .env file if it exists
+	config.LoadEnv(".env")
+
 	// Initialize the SQLite database and seed it with data from TMDB if empty.
-	// This uses a predefined TMDB API key to fetch initial movie and TV show data.
-	tmdbKey := "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhOWJkZTc1NTdkZTNmNTBiN2FiNzRhODU2MGU0YTc2NCIsIm5iZiI6MTY4ODY3NDU1OC4zOTIsInN1YiI6IjY0YTcyMGZlZjkyNTMyMDE0ZTljNmE4NCIsInNjb3BlcyI6WyJhcGpfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8dDf7xLb6lSf1n6TwUgxV3loKu3ieuB0yQw0J4MXCg4"
+	// We check for TMDB_ACCESS_TOKEN (v4) first, then fallback to TMDB_API_KEY (v3).
+	tmdbKey := os.Getenv("TMDB_ACCESS_TOKEN")
+	if tmdbKey == "" {
+		tmdbKey = os.Getenv("TMDB_API_KEY")
+	}
+
+	if tmdbKey == "" {
+		tmdbKey = "eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJhOWJkZTc1NTdkZTNmNTBiN2FiNzRhODU2MGU0YTc2NCIsIm5iZiI6MTY4ODY3NDU1OC4zOTIsInN1YiI6IjY0YTcyMGZlZjkyNTMyMDE0ZTljNmE4NCIsInNjb3BlcyI6WyJhcGpfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.8dDf7xLb6lSf1n6TwUgxV3loKu3ieuB0yQw0J4MXCg4"
+		log.Println("Note: Using hardcoded TMDB API key. If you see 401 Unauthorized errors, please set the TMDB_ACCESS_TOKEN or TMDB_API_KEY environment variable.")
+	}
+	
 	if _, err := database.InitDB("./streamline.db", tmdbKey); err != nil {
 		log.Fatalf("Failed to initialize database: %v\n", err) // Log fatal error if DB initialization fails
 	}
