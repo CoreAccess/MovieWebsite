@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"html/template"
 	"log"
 	"net/http"
 	"time"
@@ -14,31 +13,14 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func signupView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/partials/sidebar.tmpl",
-		"./ui/html/pages/signup.html",
-	}
-
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	data := getTemplateData("Sign Up", r)
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-	}
+func (app *application) signupView(w http.ResponseWriter, r *http.Request) {
+	data := app.getTemplateData("Sign Up", r)
+	app.render(w, http.StatusOK, "signup.html", data)
 }
 
 // signupPost handles the HTTP POST request to create a new user account.
 // It parses form data, hashes the password for security, and saves the user to the database.
-func signupPost(w http.ResponseWriter, r *http.Request) {
+func (app *application) signupPost(w http.ResponseWriter, r *http.Request) {
 	// Parse the incoming form submission to make form fields available
 	err := r.ParseForm()
 	if err != nil {
@@ -72,32 +54,15 @@ func signupPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
-func loginView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/partials/sidebar.tmpl",
-		"./ui/html/pages/login.html",
-	}
-
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	data := getTemplateData("Login", r)
+func (app *application) loginView(w http.ResponseWriter, r *http.Request) {
+	data := app.getTemplateData("Login", r)
 	data.Next = r.URL.Query().Get("next")
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-	}
+	app.render(w, http.StatusOK, "login.html", data)
 }
 
 // loginPost processes user login attempts. It verifies credentials against the database,
 // establishes a session, and sets a secure cookie on the client's browser.
-func loginPost(w http.ResponseWriter, r *http.Request) {
+func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 	// Parse the login form submission
 	err := r.ParseForm()
 	if err != nil {
@@ -145,16 +110,16 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
 	// Send the session ID back to the user's browser in a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
-		Value:    sessionID,   // The UUID we just generated
-		Path:     "/",         // The cookie is valid for the entire site
+		Value:    sessionID, // The UUID we just generated
+		Path:     "/",       // The cookie is valid for the entire site
 		Expires:  session.ExpiresAt,
-		HttpOnly: true,        // Mitigates XSS attacks (client-side scripts cannot access the cookie)
-		Secure:   false,       // Set to true in production if using HTTPS
+		HttpOnly: true,                    // Mitigates XSS attacks (client-side scripts cannot access the cookie)
+		Secure:   false,                   // Set to true in production if using HTTPS
 		SameSite: http.SameSiteStrictMode, // Mitigates Cross-Site Request Forgery (CSRF)
 	})
 
 	// Check if the user was trying to access a protected page before logging in.
-	// Security Fix: Use isSafeRedirect to prevent Open Redirect vulnerabilities.
+	// If 'next' is present and valid, redirect them there.
 	nextURL := r.PostForm.Get("next")
 	if isSafeRedirect(nextURL) {
 		http.Redirect(w, r, nextURL, http.StatusSeeOther)
@@ -165,7 +130,7 @@ func loginPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func logoutPost(w http.ResponseWriter, r *http.Request) {
+func (app *application) logoutPost(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session")
 	if err == nil {
 		database.DeleteSession(cookie.Value)
@@ -185,7 +150,7 @@ func logoutPost(w http.ResponseWriter, r *http.Request) {
 // sessionMiddleware is an HTTP middleware function that intercepts incoming requests
 // to determine if the user is authenticated. It checks for a session cookie and adds user data
 // to the request context if a valid session exists.
-func sessionMiddleware(next http.Handler) http.Handler {
+func (app *application) sessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Attempt to read the 'session' cookie from the incoming request
 		cookie, err := r.Cookie("session")
@@ -215,7 +180,7 @@ func sessionMiddleware(next http.Handler) http.Handler {
 }
 
 // Helper to get user from request context
-func getUser(r *http.Request) *models.User {
+func (app *application) getUser(r *http.Request) *models.User {
 	user, ok := r.Context().Value("user").(models.User)
 	if !ok {
 		return nil
@@ -223,9 +188,9 @@ func getUser(r *http.Request) *models.User {
 	return &user
 }
 
-func requireAuth(next http.HandlerFunc) http.HandlerFunc {
+func (app *application) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		user := getUser(r)
+		user := app.getUser(r)
 		if user == nil {
 			nextParam := ""
 			if r.Method == "GET" && r.URL.Path != "" {

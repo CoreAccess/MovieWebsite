@@ -2,46 +2,29 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"movieweb/internal/database"
 	"net/http"
 )
 
 // profileView renders the user dashboard
-func profileView(w http.ResponseWriter, r *http.Request) {
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/partials/sidebar.tmpl",
-		"./ui/html/pages/profile.html",
-	}
+func (app *application) profileView(w http.ResponseWriter, r *http.Request) {
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	data := getTemplateData("My Profile", r)
-	user := getUser(r)
+	data := app.getTemplateData("My Profile", r)
+	user := app.getUser(r)
 	if user != nil {
 		watchlists, err := database.GetUserWatchlists(user.ID)
 		if err == nil {
 			data.Watchlists = watchlists
 		}
 	}
-	
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-	}
+
+	app.render(w, http.StatusOK, "profile.html", data)
 }
 
 // profileEditPost handles updating user settings
-func profileEditPost(w http.ResponseWriter, r *http.Request) {
-	user := getUser(r)
+func (app *application) profileEditPost(w http.ResponseWriter, r *http.Request) {
+	user := app.getUser(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -69,8 +52,8 @@ func profileEditPost(w http.ResponseWriter, r *http.Request) {
 }
 
 // toggleWatchlistPost handles adding logic
-func toggleWatchlistPost(w http.ResponseWriter, r *http.Request) {
-	user := getUser(r)
+func (app *application) toggleWatchlistPost(w http.ResponseWriter, r *http.Request) {
+	user := app.getUser(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -108,7 +91,6 @@ func toggleWatchlistPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect back where they came from
-	// Security Fix: Use getSafeReferer to prevent Open Redirect vulnerabilities.
-	safeReferer := getSafeReferer(r, "/profile")
-	http.Redirect(w, r, safeReferer, http.StatusSeeOther)
+	referer := getSafeReferer(r, "/profile")
+	http.Redirect(w, r, referer, http.StatusSeeOther)
 }

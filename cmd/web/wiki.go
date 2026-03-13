@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -11,44 +10,27 @@ import (
 )
 
 // wikiEditView renders the form to submit an edit
-func wikiEditView(w http.ResponseWriter, r *http.Request) {
+func (app *application) wikiEditView(w http.ResponseWriter, r *http.Request) {
 	entityType := r.URL.Query().Get("type")
 	entityID := r.URL.Query().Get("id")
-	
+
 	if entityType == "" || entityID == "" {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	files := []string{
-		"./ui/html/base.tmpl",
-		"./ui/html/partials/nav.tmpl",
-		"./ui/html/partials/sidebar.tmpl",
-		"./ui/html/pages/wiki_edit.html",
-	}
+	data := app.getTemplateData("Edit Page", r)
 
-	ts, err := template.ParseFiles(files...)
-	if err != nil {
-		log.Println(err.Error())
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	data := getTemplateData("Edit Page", r)
-	
 	// Add context for the form template
 	data.EntityType = entityType
 	fmt.Sscanf(entityID, "%d", &data.EntityID)
-	
-	err = ts.ExecuteTemplate(w, "base", data)
-	if err != nil {
-		log.Println(err.Error())
-	}
+
+	app.render(w, http.StatusOK, "wiki_edit.html", data)
 }
 
 // wikiEditPost handles the actual database insertion into moderation queue
-func wikiEditPost(w http.ResponseWriter, r *http.Request) {
-	user := getUser(r)
+func (app *application) wikiEditPost(w http.ResponseWriter, r *http.Request) {
+	user := app.getUser(r)
 	if user == nil {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
@@ -66,7 +48,7 @@ func wikiEditPost(w http.ResponseWriter, r *http.Request) {
 
 	var entityID int
 	fmt.Sscanf(entityIDStr, "%d", &entityID)
-	
+
 	if entityType == "" || entityID == 0 || changes == "" {
 		http.Error(w, "Invalid inputs", http.StatusBadRequest)
 		return
@@ -81,12 +63,10 @@ func wikiEditPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect back where they came from
-	// Security Fix: Use getSafeReferer to prevent Open Redirect vulnerabilities
-	// while preserving the user's workflow.
-	safeReferer := getSafeReferer(r, "/")
+	referer := getSafeReferer(r, "/")
 
-	// Ensure we append the query parameter correctly
-	redirectURL := safeReferer
+	// Append success query param safely
+	redirectURL := referer
 	if strings.Contains(redirectURL, "?") {
 		redirectURL += "&success=edit_submitted"
 	} else {
