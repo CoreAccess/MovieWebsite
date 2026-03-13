@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"net/url"
 
 	"movieweb/internal/database"
 )
@@ -20,8 +22,14 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 
 		// If no user is found in the context, it means the request is unauthenticated.
 		// We redirect them to the login page to establish a session.
+		// Pedagogical Note: We include a 'next' parameter so that after a successful login,
+		// the user can be automatically redirected back to the page they were trying to access.
 		if user == nil {
-			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			nextParam := ""
+			if r.Method == "GET" && r.URL.Path != "" {
+				nextParam = "?next=" + url.QueryEscape(r.URL.Path)
+			}
+			http.Redirect(w, r, "/login"+nextParam, http.StatusSeeOther)
 			return
 		}
 
@@ -29,7 +37,14 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 		// We only allow users with the 'admin' role to proceed to administrative functions.
 		// This prevents regular users or moderators from accessing the admin dashboard
 		// and performing sensitive actions like approving/rejecting wiki edits.
+		//
+		// Why this is important: Even if a user is authenticated, they should only have access
+		// to resources that their role permits (Principle of Least Privilege).
 		if user.Role != "admin" {
+			// Security Audit: Log unauthorized access attempts to the admin area.
+			// This helps administrators monitor for potential malicious behavior.
+			log.Printf("SECURITY: Unauthorized admin access attempt by User ID %d (%s) on %s", user.ID, user.Username, r.URL.Path)
+
 			// If the user is authenticated but doesn't have the required role,
 			// we return a 403 Forbidden status code.
 			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
@@ -48,10 +63,14 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 
 	// Fast counting logic for MVP metrics
 	var userCount, mediaCount, pendingEdits, activeAds int
-	database.DB.QueryRow("SELECT COUNT(*) FROM users").Scan(&userCount)
-	database.DB.QueryRow("SELECT (SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM tv_series)").Scan(&mediaCount)
-	database.DB.QueryRow("SELECT COUNT(*) FROM edit_suggestions WHERE status = 'pending'").Scan(&pendingEdits)
-	database.DB.QueryRow("SELECT COUNT(*) FROM ad_campaigns").Scan(&activeAds)
+	query := `
+		SELECT
+			(SELECT COUNT(*) FROM users),
+			(SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM tv_series),
+			(SELECT COUNT(*) FROM edit_suggestions WHERE status = 'pending'),
+			(SELECT COUNT(*) FROM ad_campaigns)
+	`
+	database.DB.QueryRow(query).Scan(&userCount, &mediaCount, &pendingEdits, &activeAds)
 
 	data.UserCount = userCount
 	data.MediaCount = mediaCount
