@@ -34,6 +34,13 @@ type PasswordResetToken struct {
 	ExpiresAt time.Time
 }
 
+// Genre represents a movie or tv series genre
+type Genre struct {
+	ID   int
+	Name string
+	Slug string
+}
+
 // Organization represents schema.org/Organization (Studio, Network)
 type Organization struct {
 	ID           int
@@ -44,23 +51,28 @@ type Organization struct {
 	Logo         string
 	Url          string
 	FoundingDate string
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 // Person represents schema.org/Person (Actor, Director)
 type Person struct {
-	ID            int
-	Name          string
-	Slug          string
-	Gender        string
-	BirthDate     string
-	BirthPlace    string
-	DeathDate     string
-	Height        string
-	Description   string
-	Image         string
-	AlsoKnownAs   string
-	Awards        string
-	KnowsLanguage string
+	ID                 int
+	Name               string
+	Slug               string
+	Gender             string
+	BirthDate          string
+	BirthPlace         string
+	DeathDate          string
+	Height             string
+	Description        string
+	Image              string
+	KnowsLanguage      string
+	NationalityCode    string
+	KnownForDepartment string
+	PopularityScore    float64
+	CreatedAt          time.Time
+	UpdatedAt          time.Time
 }
 
 // Character represents schema.org/Person (Fictional)
@@ -73,48 +85,68 @@ type Character struct {
 	DeathDate   string
 	Description string
 	Image       string
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // Movie represents schema.org/Movie.
 // It corresponds to the core details found in the `movies` table in the database.
 // This structure is often passed directly to templates to display movie listings or specific movie metadata.
 type Movie struct {
-	ID                int
-	Name              string
-	Slug              string // URL-friendly string representing the movie name
-	DatePublished     string
-	Description       string
-	Image             string // URL or path to the poster image
-	Trailer           string
-	Video             string
-	ContentRating     string
-	Duration          int     // Runtime length of the movie
-	AggregateRating   float64 // Average score given by users
-	Genre             string  // Stored as JSON string representation (e.g., '["Action", "Drama"]')
-	Budget            string
-	BoxOffice         string
-	InLanguage        string
-	ProductionCompany string
-	Keywords          string
+	ID               int
+	Name             string
+	Slug             string // URL-friendly string representing the movie name
+	DatePublished    string
+	Description      string
+	Image            string // URL or path to the poster image
+	Trailer          string
+	Video            string
+	ContentRating    string
+	Duration         int     // Runtime length of the movie
+	AggregateRating  float64 // Average score given by users
+	Budget           string
+	BoxOffice        string
+	LanguageCode     string
+	CountryCode      string
+	Tagline          string
+	RatingCount      int
+	ReviewCount      int
+	BestRating       float64
+	WorstRating      float64
+	IsFamilyFriendly bool
+	Subtitle         string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Genres           []Genre
+	Keywords         []string
 }
 
 // TVSeries represents schema.org/TVSeries
 type TVSeries struct {
-	ID                int
-	Name              string
-	Slug              string
-	StartDate         string
-	EndDate           string
-	Description       string
-	Image             string
-	ContentRating     string
-	AggregateRating   float64
-	NumberOfSeasons   int
-	NumberOfEpisodes  int
-	Trailer           string
-	Genre             string // JSON string representation
-	ProductionCompany string
-	InLanguage        string
+	ID               int
+	Name             string
+	Slug             string
+	StartDate        string
+	EndDate          string
+	Description      string
+	Image            string
+	ContentRating    string
+	AggregateRating  float64
+	NumberOfSeasons  int
+	NumberOfEpisodes int
+	Trailer          string
+	LanguageCode     string
+	CountryCode      string
+	Tagline          string
+	RatingCount      int
+	ReviewCount      int
+	BestRating       float64
+	WorstRating      float64
+	Subtitle         string
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Genres           []Genre
+	Keywords         []string
 }
 
 // TVEpisode represents schema.org/TVEpisode
@@ -211,7 +243,7 @@ type Notification struct {
 
 // UserNotificationSettings stores user preferences for alerts
 type UserNotificationSettings struct {
-	UserID      bool // changed from int to avoid error? wait!
+	UserID      int
 	EmailAlerts bool
 	SiteAlerts  bool
 	Mentions    bool
@@ -227,6 +259,26 @@ type EditHistory struct {
 	OldValue   string
 	NewValue   string
 	EditedAt   time.Time
+}
+
+// Review represents schema.org/UserReview or CriticReview
+type Review struct {
+	ID                int
+	UserID            int
+	MediaType         string
+	MediaID           int
+	Rating            float64
+	Title             string
+	Body              string
+	PositiveNotes     string
+	NegativeNotes     string
+	ContainsSpoilers  bool
+	ReviewType        string
+	PublicationName   string
+	ExternalReviewUrl string
+	Status            string
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // EditSuggestion for lower-reputation users (needs moderation)
@@ -256,7 +308,6 @@ type AdCampaign struct {
 	ID          int
 	CompanyID   int
 	Budget      float64
-	TargetPages string // JSON array of slugs/categories
 	Impressions int
 	Clicks      int
 	StartDate   time.Time
@@ -268,6 +319,8 @@ type Post struct {
 	ID        int
 	UserID    int
 	Content   string
+	MediaType string // Nullable in DB, but string in struct
+	MediaID   int    // Nullable in DB, can use int if handled correctly or pointer
 	CreatedAt time.Time
 }
 
@@ -291,7 +344,6 @@ type Poll struct {
 	ID       int
 	PostID   int
 	Question string
-	Options  string // JSON array
 }
 
 // EbayListing represents an affiliate merchandise item

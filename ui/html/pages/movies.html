@@ -106,7 +106,7 @@
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-sm-4 col-md-3">
                             <span class="text-muted small fw-medium d-block">Language</span>
-                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.InLanguage}}{{.MovieDetail.Movie.InLanguage}}{{else}}English{{end}}</span>
+                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.LanguageCode}}{{.MovieDetail.Movie.LanguageCode}}{{else}}en{{end}}</span>
                         </div>
                         <div class="col-6 col-sm-4 col-md-3">
                             <span class="text-muted small fw-medium d-block">Budget</span>
@@ -115,10 +115,6 @@
                         <div class="col-6 col-sm-4 col-md-3">
                             <span class="text-muted small fw-medium d-block">Box Office</span>
                             <span class="fw-bold text-dark">{{if .MovieDetail.Movie.BoxOffice}}{{.MovieDetail.Movie.BoxOffice}}{{else}}Unknown{{end}}</span>
-                        </div>
-                        <div class="col-6 col-sm-12 col-md-3">
-                            <span class="text-muted small fw-medium d-block">Studio</span>
-                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.ProductionCompany}}{{.MovieDetail.Movie.ProductionCompany}}{{else}}Not Available{{end}}</span>
                         </div>
                     </div>
 

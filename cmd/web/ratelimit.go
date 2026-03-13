@@ -40,7 +40,7 @@ func rateLimit(next http.Handler) http.Handler {
 				ip = host
 			}
 		}
-		
+
 		limiter.mu.Lock()
 		limiter.clients[ip]++
 		count := limiter.clients[ip]
