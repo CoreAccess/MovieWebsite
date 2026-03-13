@@ -1676,35 +1676,6 @@ func GetTVSeriesDetail(id int) (models.TVSeriesDetail, error) {
 	return detail, nil
 }
 
-// GetTVSeriesDetailBySlug fetches a show, its cast, and episodes by slug
-func GetTVSeriesDetailBySlug(slug string) (models.TVSeriesDetail, error) {
-	var detail models.TVSeriesDetail
-
-	series, err := GetTVSeriesBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Series = series
-
-	cast, err := GetTVSeriesCast(series.ID)
-	if err == nil {
-		detail.Cast = cast
-	}
-
-	eps, err := GetTVEpisodes(series.ID)
-	if err == nil {
-		detail.Episodes = eps
-	}
-
-	directors, writers, err := GetMediaCrew("tv_series", series.ID)
-	if err == nil {
-		detail.Directors = directors
-		detail.Writers = writers
-	}
-
-	return detail, nil
-}
-
 // GetMediaCrew fetches the directors and writers for a given media (movie or tv_series)
 func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, writers []models.Person, err error) {
 	query := `
