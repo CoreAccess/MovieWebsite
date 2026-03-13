@@ -25,14 +25,6 @@ go.work
 
 # Build artifacts
 tmp/
-cmd/tmp_app.exe
-cmd/tmp_server.exe
-cmd/web.exe
-cmd/web_server.exe
-tmp_app.exe
-tmp_server.exe
-web.exe
-web_server.exe
 
 # VS Code
 .vscode/
