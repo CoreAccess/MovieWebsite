@@ -238,10 +238,10 @@
                                                 <i class="bi bi-star-fill text-warning" style="font-size: 0.65rem;"></i>
                                                 <span style="font-size:0.8rem;">{{printf "%.1f" .AggregateRating}}</span>
                                             </span>
-                                            {{$genre := firstGenre .Genre}}
-                                            {{if $genre}}
+                                            {{if gt (len .Genres) 0}}
+                                            {{$genre := index .Genres 0}}
                                             <span class="opacity-25">·</span>
-                                            <span class="badge rounded-pill" style="font-size:0.65rem;font-weight:600;background:rgba(99,102,241,0.08);color:#6366f1;padding:2px 8px;">{{$genre}}</span>
+                                            <span class="badge rounded-pill" style="font-size:0.65rem;font-weight:600;background:rgba(99,102,241,0.08);color:#6366f1;padding:2px 8px;">{{$genre.Name}}</span>
                                             {{end}}
                                         </div>
                                     </div>
