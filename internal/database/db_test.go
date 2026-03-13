@@ -10,7 +10,7 @@ import (
 )
 
 // setupBenchDB creates an in-memory database and the tv_cast table.
-func setupBenchDB(b *testing.B) *sql.DB {
+func setupCastBenchDB(b *testing.B) *sql.DB {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		b.Fatalf("failed to open memory db: %v", err)
@@ -44,7 +44,7 @@ func mockCastData(num int) [][4]int64 {
 
 // BenchmarkTVCastInsert_NPlus1 measures the current approach.
 func BenchmarkTVCastInsert_NPlus1(b *testing.B) {
-	db := setupBenchDB(b)
+	db := setupCastBenchDB(b)
 	defer db.Close()
 
 	numRecords := 50
@@ -70,7 +70,7 @@ func BenchmarkTVCastInsert_NPlus1(b *testing.B) {
 
 // BenchmarkTVCastInsert_Batched measures the optimized chunked approach.
 func BenchmarkTVCastInsert_Batched(b *testing.B) {
-	db := setupBenchDB(b)
+	db := setupCastBenchDB(b)
 	defer db.Close()
 
 	numRecords := 50

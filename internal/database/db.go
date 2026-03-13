@@ -1049,10 +1049,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
 						}
 					}
-					if len(crewParams) > 0 {
-						crewQuery := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ", "))
-						_, _ = DB.Exec(crewQuery, crewParams...)
-					}
+
 				}
 			}
 		}
@@ -1103,6 +1100,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							continue
 						}
 						seriesID := seriesIDs[i]
+						slug := tmdb.Slugify(s.Name)
 
 						for _, gID := range s.GenreIDs {
 							_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
@@ -1168,36 +1166,38 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							}
 						}
 
-				// Fetch Episodes for Season 1
-				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
-				if err == nil && len(episodes) > 0 {
-					var vals []interface{}
-					var placeholders []string
+						// Fetch Episodes for Season 1
+						episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
+						if err == nil && len(episodes) > 0 {
+							var vals []interface{}
+							var placeholders []string
 
-					for _, ep := range episodes {
-						epSlug := tmdb.Slugify(ep.Name)
-						if epSlug == "" {
-							epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
-						}
-						epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
+							for _, ep := range episodes {
+								epSlug := tmdb.Slugify(ep.Name)
+								if epSlug == "" {
+									epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
+								}
+								epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
 
 								var image string
 								if ep.StillPath != "" {
 									image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
 								}
 
-						placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
-						vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
-					}
+								placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+								vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+							}
 
-					query := fmt.Sprintf(`INSERT INTO tv_episodes
-						(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
-						VALUES %s`, strings.Join(placeholders, ","))
+							query := fmt.Sprintf(`INSERT INTO tv_episodes
+								(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
+								VALUES %s`, strings.Join(placeholders, ","))
 
-					_, err := DB.Exec(query, vals...)
+							_, err := DB.Exec(query, vals...)
 
-					if err != nil {
-						log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
+							if err != nil {
+								log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
+							}
+						}
 					}
 				}
 			}

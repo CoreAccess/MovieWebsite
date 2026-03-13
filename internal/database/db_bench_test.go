@@ -8,7 +8,7 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-func setupBenchDB(b *testing.B) *sql.DB {
+func setupSeriesBenchDB(b *testing.B) *sql.DB {
 	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		b.Fatalf("Failed to open DB: %v", err)
@@ -74,7 +74,7 @@ func generateShows(count int) []TMDBShow {
 }
 
 func BenchmarkTVSeriesInsert_Sequential(b *testing.B) {
-	db := setupBenchDB(b)
+	db := setupSeriesBenchDB(b)
 	defer db.Close()
 	shows := generateShows(20)
 
@@ -98,7 +98,7 @@ func BenchmarkTVSeriesInsert_Sequential(b *testing.B) {
 }
 
 func BenchmarkTVSeriesInsert_Batched(b *testing.B) {
-	db := setupBenchDB(b)
+	db := setupSeriesBenchDB(b)
 	defer db.Close()
 	shows := generateShows(20)
 
