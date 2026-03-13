@@ -1474,26 +1474,6 @@ func GetMovieByID(id int) (models.Movie, error) {
 	return m, err
 }
 
-// GetMovieBySlug fetches a single movie by its slug
-func GetMovieBySlug(slug string) (models.Movie, error) {
-	var m models.Movie
-	var budget, boxOffice, langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, is_family_friendly, COALESCE(subtitle, '') FROM movies WHERE slug = ?", slug).
-		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
-	m.Budget = budget.String
-	m.BoxOffice = boxOffice.String
-	m.LanguageCode = langCode.String
-	m.CountryCode = countryCode.String
-	m.Tagline = tagline.String
-	m.Subtitle = subtitle.String
-
-	// Fetch genres
-	genres, _ := GetMovieGenres(m.ID)
-	m.Genres = genres
-
-	return m, err
-}
-
 // GetMovieCast fetches the cast list for a given movie ID
 func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	query := `
@@ -1567,32 +1547,6 @@ func GetMovieDetail(id int) (models.MovieDetail, error) {
 	return detail, nil
 }
 
-// GetMovieDetailBySlug fetches a movie and all its related entities by slug
-func GetMovieDetailBySlug(slug string) (models.MovieDetail, error) {
-	var detail models.MovieDetail
-
-	movie, err := GetMovieBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Movie = movie
-
-	cast, err := GetMovieCast(movie.ID)
-	if err != nil {
-		log.Printf("Error fetching cast for movie %s: %v", slug, err)
-	} else {
-		detail.Cast = cast
-	}
-
-	directors, writers, err := GetMediaCrew("movie", movie.ID)
-	if err == nil {
-		detail.Directors = directors
-		detail.Writers = writers
-	}
-
-	return detail, nil
-}
-
 // GetTVSeriesByID fetches a single TV show by ID
 // GetTVSeriesGenres fetches genres for a specific TV show
 func GetTVSeriesGenres(seriesID int) ([]models.Genre, error) {
@@ -1623,23 +1577,6 @@ func GetTVSeriesByID(id int) (models.TVSeries, error) {
 	var s models.TVSeries
 	var langCode, countryCode, tagline, subtitle sql.NullString
 	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE id = ?", id).
-		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
-	s.LanguageCode = langCode.String
-	s.CountryCode = countryCode.String
-	s.Tagline = tagline.String
-	s.Subtitle = subtitle.String
-
-	genres, _ := GetTVSeriesGenres(s.ID)
-	s.Genres = genres
-
-	return s, err
-}
-
-// GetTVSeriesBySlug fetches a single TV show by its slug
-func GetTVSeriesBySlug(slug string) (models.TVSeries, error) {
-	var s models.TVSeries
-	var langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE slug = ?", slug).
 		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
 	s.LanguageCode = langCode.String
 	s.CountryCode = countryCode.String
@@ -1751,35 +1688,6 @@ func GetTVSeriesDetail(id int) (models.TVSeriesDetail, error) {
 	return detail, nil
 }
 
-// GetTVSeriesDetailBySlug fetches a show, its cast, and episodes by slug
-func GetTVSeriesDetailBySlug(slug string) (models.TVSeriesDetail, error) {
-	var detail models.TVSeriesDetail
-
-	series, err := GetTVSeriesBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Series = series
-
-	cast, err := GetTVSeriesCast(series.ID)
-	if err == nil {
-		detail.Cast = cast
-	}
-
-	eps, err := GetTVEpisodes(series.ID)
-	if err == nil {
-		detail.Episodes = eps
-	}
-
-	directors, writers, err := GetMediaCrew("tv_series", series.ID)
-	if err == nil {
-		detail.Directors = directors
-		detail.Writers = writers
-	}
-
-	return detail, nil
-}
-
 // GetMediaCrew fetches the directors and writers for a given media (movie or tv_series)
 func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, writers []models.Person, err error) {
 	query := `
@@ -1812,33 +1720,6 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 	}
 
 	return directors, writers, nil
-}
-
-// GetPersonBySlug fetches a single person
-func GetPersonBySlug(slug string) (models.Person, error) {
-	var p models.Person
-	var knowsLang, natCode, dept sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), popularity_score FROM people WHERE slug = ?", slug).
-		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
-	p.KnowsLanguage = knowsLang.String
-	p.NationalityCode = natCode.String
-	p.KnownForDepartment = dept.String
-	return p, err
-}
-
-// GetPersonDetail fetches a person profile
-func GetPersonDetail(slug string) (models.PersonDetail, error) {
-	var detail models.PersonDetail
-	person, err := GetPersonBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Person = person
-	movies, _ := GetPersonMovies(person.ID)
-	shows, _ := GetPersonShows(person.ID)
-	detail.Movies = movies
-	detail.Shows = shows
-	return detail, nil
 }
 
 // GetPersonByID fetches a single person
