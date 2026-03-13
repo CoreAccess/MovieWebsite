@@ -893,11 +893,22 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 			{Username: "sarah_k", Email: "sarah@example.com", Avatar: "/static/img/avatar2.png", ReputationScore: 10, Role: "user"},
 			{Username: "moviebuff99", Email: "buff99@example.com", Avatar: "/static/img/avatar3.png", ReputationScore: 100, Role: "moderator"},
 		}
-		for _, u := range users {
-			_, err = DB.Exec("INSERT INTO users (username, email, password_hash, avatar, reputation_score, role) VALUES (?, ?, ?, ?, ?, ?)", u.Username, u.Email, string(hashedPassword), u.Avatar, u.ReputationScore, u.Role)
-			if err != nil {
-				log.Println("Error inserting user:", err)
+
+		// Use a single bulk insert to avoid N+1 queries during database initialization
+		query := "INSERT INTO users (username, email, password_hash, avatar, reputation_score, role) VALUES "
+		var args []interface{}
+
+		for i, u := range users {
+			query += "(?, ?, ?, ?, ?, ?)"
+			if i < len(users)-1 {
+				query += ", "
 			}
+			args = append(args, u.Username, u.Email, string(hashedPassword), u.Avatar, u.ReputationScore, u.Role)
+		}
+
+		_, err = DB.Exec(query, args...)
+		if err != nil {
+			log.Println("Error inserting users in bulk:", err)
 		}
 
 		client := tmdb.NewClient(tmdbAPIKey)
