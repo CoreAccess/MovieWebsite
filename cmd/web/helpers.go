@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
@@ -181,4 +182,54 @@ func (app *application) render(w http.ResponseWriter, status int, page string, d
 
 	// Write the contents of the buffer to the http.ResponseWriter.
 	buf.WriteTo(w)
+}
+
+// isSafeRedirect checks if the URL path is a safe, relative path
+// and does not point to an external domain (e.g. "//evil.com")
+func isSafeRedirect(path string) bool {
+	if path == "" {
+		return false
+	}
+	// Must start with / and not be followed by another / or \
+	if path[0] == '/' && (len(path) == 1 || (path[1] != '/' && path[1] != '\\')) {
+		return true
+	}
+	return false
+}
+
+// getSafeReferer safely extracts the relative path and query from the Referer header
+// returning a fallback if the referer is empty or unsafe.
+func getSafeReferer(r *http.Request, fallback string) string {
+	referer := r.Header.Get("Referer")
+	if referer == "" {
+		return fallback
+	}
+
+	u, err := url.Parse(referer)
+	if err != nil {
+		return fallback
+	}
+
+	// Reconstruct the relative URL (path + query string)
+	// If the original URL had a host (e.g. //evil.com), the path might be empty.
+	// We should only consider it safe if it's explicitly a relative path or if we
+	// can safely extract the path. To prevent open redirects, if the host is set
+	// but the path is empty or just "/", we need to ensure the final path is safe.
+	path := u.Path
+	if path == "" {
+		if u.Host != "" || u.Opaque != "" {
+			return fallback
+		}
+		path = "/"
+	}
+
+	if u.RawQuery != "" {
+		path += "?" + u.RawQuery
+	}
+
+	if !isSafeRedirect(path) {
+		return fallback
+	}
+
+	return path
 }

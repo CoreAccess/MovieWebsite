@@ -893,15 +893,26 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 			{Username: "sarah_k", Email: "sarah@example.com", Avatar: "/static/img/avatar2.png", ReputationScore: 10, Role: "user"},
 			{Username: "moviebuff99", Email: "buff99@example.com", Avatar: "/static/img/avatar3.png", ReputationScore: 100, Role: "moderator"},
 		}
-		for _, u := range users {
-			_, err = DB.Exec("INSERT INTO users (username, email, password_hash, avatar, reputation_score, role) VALUES (?, ?, ?, ?, ?, ?)", u.Username, u.Email, string(hashedPassword), u.Avatar, u.ReputationScore, u.Role)
-			if err != nil {
-				log.Println("Error inserting user:", err)
+
+		// Use a single bulk insert to avoid N+1 queries during database initialization
+		query := "INSERT INTO users (username, email, password_hash, avatar, reputation_score, role) VALUES "
+		var args []interface{}
+
+		for i, u := range users {
+			query += "(?, ?, ?, ?, ?, ?)"
+			if i < len(users)-1 {
+				query += ", "
 			}
+			args = append(args, u.Username, u.Email, string(hashedPassword), u.Avatar, u.ReputationScore, u.Role)
+		}
+
+		_, err = DB.Exec(query, args...)
+		if err != nil {
+			log.Println("Error inserting users in bulk:", err)
 		}
 
 		client := tmdb.NewClient(tmdbAPIKey)
-		
+
 		// Pre-seed genres
 		mGenres, err := client.FetchMovieGenres()
 		if err == nil {
@@ -926,9 +937,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		} else {
 			for _, m := range movies {
 				slug := tmdb.Slugify(m.Title)
-				if slug == "" { slug = "movie" }
+				if slug == "" {
+					slug = "movie"
+				}
 				langCode := m.OriginalLanguage
-				if langCode == "" { langCode = "en" }
+				if langCode == "" {
+					langCode = "en"
+				}
 				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
 					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, langCode)
 				if err != nil {
@@ -944,6 +959,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				// Fetch Credits
 				credits, err := client.FetchMovieCredits(m.ID)
 				if err == nil {
+					type castInsert struct {
+						movieID      int64
+						personID     int64
+						characterID  int64
+						billingOrder int
+					}
+					var castMappings []castInsert
+
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
 						if personSlug == "" {
@@ -971,7 +994,34 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							charID, _ = res.LastInsertId()
 						}
 
-						_, _ = DB.Exec("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", movieID, personID, charID, cast.Order)
+						castMappings = append(castMappings, castInsert{
+							movieID:      movieID,
+							personID:     personID,
+							characterID:  charID,
+							billingOrder: cast.Order,
+						})
+					}
+
+					if len(castMappings) > 0 {
+						chunkSize := 100 // Safe limit for SQLite (max 32766 params, we use 4 per row: 4 * 100 = 400 parameters)
+						for i := 0; i < len(castMappings); i += chunkSize {
+							end := i + chunkSize
+							if end > len(castMappings) {
+								end = len(castMappings)
+							}
+							chunk := castMappings[i:end]
+
+							valueStrings := make([]string, 0, len(chunk))
+							valueArgs := make([]interface{}, 0, len(chunk)*4)
+
+							for _, c := range chunk {
+								valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+								valueArgs = append(valueArgs, c.movieID, c.personID, c.characterID, c.billingOrder)
+							}
+
+							query := fmt.Sprintf("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES %s", strings.Join(valueStrings, ","))
+							_, _ = DB.Exec(query, valueArgs...)
+						}
 					}
 
 					for _, crew := range credits.Crew {
@@ -999,6 +1049,10 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
 						}
 					}
+					if len(crewParams) > 0 {
+						crewQuery := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ", "))
+						_, _ = DB.Exec(crewQuery, crewParams...)
+					}
 				}
 			}
 		}
@@ -1008,86 +1062,118 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		if err != nil {
 			log.Println("Error fetching shows from TMDB:", err)
 		} else {
-			for _, s := range shows {
-				slug := tmdb.Slugify(s.Name)
-				if slug == "" { slug = "show" }
-				langCode := s.OriginalLanguage
-				if langCode == "" { langCode = "en" }
-				res, err := DB.Exec("INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
+			// Batch Insert TV Series to resolve N+1 issue
+			if len(shows) > 0 {
+				query := "INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES "
+				var args []interface{}
+				for i, s := range shows {
+					slug := tmdb.Slugify(s.Name)
+					if slug == "" {
+						slug = "show"
+					}
+					langCode := s.OriginalLanguage
+					if langCode == "" {
+						langCode = "en"
+					}
+					query += "(?, ?, ?, ?, ?, ?, ?)"
+					if i < len(shows)-1 {
+						query += ", "
+					}
+					args = append(args, s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
+				}
+				query += " RETURNING id"
+
+				rows, err := DB.Query(query, args...)
 				if err != nil {
-					log.Printf("Error inserting show %s: %v", s.Name, err)
-					continue
-				}
-				seriesID, _ := res.LastInsertId()
-
-				for _, gID := range s.GenreIDs {
-					_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
-				}
-
-				// Fetch Credits
-				credits, err := client.FetchTVCredits(s.ID)
-				if err == nil {
-					for _, cast := range credits.Cast {
-						personSlug := tmdb.Slugify(cast.Name)
-						if personSlug == "" {
-							personSlug = "person"
+					log.Printf("Error batch inserting shows: %v", err)
+				} else {
+					var seriesIDs []int64
+					for rows.Next() {
+						var id int64
+						if err := rows.Scan(&id); err == nil {
+							seriesIDs = append(seriesIDs, id)
 						}
-						var personID int64
-						err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
-						if err != nil {
-							var image string
-							if cast.ProfilePath != "" {
-								image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
-							}
-							res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
-							personID, _ = res.LastInsertId()
-						}
-
-						characterSlug := tmdb.Slugify(cast.Character)
-						if characterSlug == "" {
-							characterSlug = "character"
-						}
-						var charID int64
-						err = DB.QueryRow("SELECT id FROM characters WHERE name = ?", cast.Character).Scan(&charID)
-						if err != nil {
-							res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
-							charID, _ = res.LastInsertId()
-						}
-
-						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 					}
+					rows.Close()
 
-					for _, crew := range credits.Crew {
-						if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
-							crewSlug := tmdb.Slugify(crew.Name)
-							if crewSlug == "" {
-								crewSlug = "crew"
-							}
-							var personID int64
-							err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
-							if err != nil {
-								var image string
-								if crew.ProfilePath != "" {
-									image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+					// Now loop to insert the dependent relations per show
+					for i, s := range shows {
+						if i >= len(seriesIDs) {
+							log.Printf("Skipping dependent insertions for show %s due to missing ID", s.Name)
+							continue
+						}
+						seriesID := seriesIDs[i]
+
+						for _, gID := range s.GenreIDs {
+							_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
+						}
+
+						// Fetch Credits
+						credits, err := client.FetchTVCredits(s.ID)
+						if err == nil {
+							for _, cast := range credits.Cast {
+								personSlug := tmdb.Slugify(cast.Name)
+								if personSlug == "" {
+									personSlug = "person"
 								}
-								res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
-								personID, _ = res.LastInsertId()
+								var personID int64
+								err = DB.QueryRow("SELECT id FROM people WHERE name = ?", cast.Name).Scan(&personID)
+								if err != nil {
+									var image string
+									if cast.ProfilePath != "" {
+										image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
+									}
+									res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", cast.Name, personSlug, cast.Gender, image)
+									personID, _ = res.LastInsertId()
+								}
+
+								characterSlug := tmdb.Slugify(cast.Character)
+								if characterSlug == "" {
+									characterSlug = "character"
+								}
+								var charID int64
+								err = DB.QueryRow("SELECT id FROM characters WHERE name = ?", cast.Character).Scan(&charID)
+								if err != nil {
+									res, _ := DB.Exec("INSERT INTO characters (name, slug, gender) VALUES (?, ?, ?)", cast.Character, characterSlug, cast.Gender)
+									charID, _ = res.LastInsertId()
+								}
+
+								_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 							}
 
-							job := "writer"
-							if strings.Contains(crew.Job, "Producer") {
-								job = "director" // mapping series creators/producers as "directors" for UI simplicity
-							}
+							for _, crew := range credits.Crew {
+								if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
+									crewSlug := tmdb.Slugify(crew.Name)
+									if crewSlug == "" {
+										crewSlug = "crew"
+									}
+									var personID int64
+									err = DB.QueryRow("SELECT id FROM people WHERE name = ?", crew.Name).Scan(&personID)
+									if err != nil {
+										var image string
+										if crew.ProfilePath != "" {
+											image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+										}
+										res, _ := DB.Exec("INSERT INTO people (name, slug, gender, image) VALUES (?, ?, ?, ?)", crew.Name, crewSlug, 0, image)
+										personID, _ = res.LastInsertId()
+									}
 
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+									job := "writer"
+									if strings.Contains(crew.Job, "Producer") {
+										job = "director" // mapping series creators/producers as "directors" for UI simplicity
+									}
+
+									_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+								}
+							}
 						}
-					}
-				}
 
 				// Fetch Episodes for Season 1
 				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
-				if err == nil {
+				if err == nil && len(episodes) > 0 {
+					var vals []interface{}
+					var placeholders []string
+
 					for _, ep := range episodes {
 						epSlug := tmdb.Slugify(ep.Name)
 						if epSlug == "" {
@@ -1095,19 +1181,23 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 						}
 						epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
 
-						var image string
-						if ep.StillPath != "" {
-							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
-						}
+								var image string
+								if ep.StillPath != "" {
+									image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
+								}
 
-						_, err := DB.Exec(`INSERT INTO tv_episodes 
-							(series_id, season_number, episode_number, name, slug, date_published, description, image, duration) 
-							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-							seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+						placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+						vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+					}
 
-						if err != nil {
-							log.Printf("Error inserting episode %s: %v", ep.Name, err)
-						}
+					query := fmt.Sprintf(`INSERT INTO tv_episodes
+						(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
+						VALUES %s`, strings.Join(placeholders, ","))
+
+					_, err := DB.Exec(query, vals...)
+
+					if err != nil {
+						log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
 					}
 				}
 			}
@@ -1399,26 +1489,6 @@ func GetMovieByID(id int) (models.Movie, error) {
 	return m, err
 }
 
-// GetMovieBySlug fetches a single movie by its slug
-func GetMovieBySlug(slug string) (models.Movie, error) {
-	var m models.Movie
-	var budget, boxOffice, langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, is_family_friendly, COALESCE(subtitle, '') FROM movies WHERE slug = ?", slug).
-		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
-	m.Budget = budget.String
-	m.BoxOffice = boxOffice.String
-	m.LanguageCode = langCode.String
-	m.CountryCode = countryCode.String
-	m.Tagline = tagline.String
-	m.Subtitle = subtitle.String
-
-	// Fetch genres
-	genres, _ := GetMovieGenres(m.ID)
-	m.Genres = genres
-
-	return m, err
-}
-
 // GetMovieCast fetches the cast list for a given movie ID
 func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	query := `
@@ -1492,32 +1562,6 @@ func GetMovieDetail(id int) (models.MovieDetail, error) {
 	return detail, nil
 }
 
-// GetMovieDetailBySlug fetches a movie and all its related entities by slug
-func GetMovieDetailBySlug(slug string) (models.MovieDetail, error) {
-	var detail models.MovieDetail
-
-	movie, err := GetMovieBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Movie = movie
-
-	cast, err := GetMovieCast(movie.ID)
-	if err != nil {
-		log.Printf("Error fetching cast for movie %s: %v", slug, err)
-	} else {
-		detail.Cast = cast
-	}
-
-	directors, writers, err := GetMediaCrew("movie", movie.ID)
-	if err == nil {
-		detail.Directors = directors
-		detail.Writers = writers
-	}
-
-	return detail, nil
-}
-
 // GetTVSeriesByID fetches a single TV show by ID
 // GetTVSeriesGenres fetches genres for a specific TV show
 func GetTVSeriesGenres(seriesID int) ([]models.Genre, error) {
@@ -1548,23 +1592,6 @@ func GetTVSeriesByID(id int) (models.TVSeries, error) {
 	var s models.TVSeries
 	var langCode, countryCode, tagline, subtitle sql.NullString
 	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE id = ?", id).
-		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
-	s.LanguageCode = langCode.String
-	s.CountryCode = countryCode.String
-	s.Tagline = tagline.String
-	s.Subtitle = subtitle.String
-
-	genres, _ := GetTVSeriesGenres(s.ID)
-	s.Genres = genres
-
-	return s, err
-}
-
-// GetTVSeriesBySlug fetches a single TV show by its slug
-func GetTVSeriesBySlug(slug string) (models.TVSeries, error) {
-	var s models.TVSeries
-	var langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE slug = ?", slug).
 		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
 	s.LanguageCode = langCode.String
 	s.CountryCode = countryCode.String
@@ -1676,35 +1703,6 @@ func GetTVSeriesDetail(id int) (models.TVSeriesDetail, error) {
 	return detail, nil
 }
 
-// GetTVSeriesDetailBySlug fetches a show, its cast, and episodes by slug
-func GetTVSeriesDetailBySlug(slug string) (models.TVSeriesDetail, error) {
-	var detail models.TVSeriesDetail
-
-	series, err := GetTVSeriesBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Series = series
-
-	cast, err := GetTVSeriesCast(series.ID)
-	if err == nil {
-		detail.Cast = cast
-	}
-
-	eps, err := GetTVEpisodes(series.ID)
-	if err == nil {
-		detail.Episodes = eps
-	}
-
-	directors, writers, err := GetMediaCrew("tv_series", series.ID)
-	if err == nil {
-		detail.Directors = directors
-		detail.Writers = writers
-	}
-
-	return detail, nil
-}
-
 // GetMediaCrew fetches the directors and writers for a given media (movie or tv_series)
 func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, writers []models.Person, err error) {
 	query := `
@@ -1737,33 +1735,6 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 	}
 
 	return directors, writers, nil
-}
-
-// GetPersonBySlug fetches a single person
-func GetPersonBySlug(slug string) (models.Person, error) {
-	var p models.Person
-	var knowsLang, natCode, dept sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), popularity_score FROM people WHERE slug = ?", slug).
-		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
-	p.KnowsLanguage = knowsLang.String
-	p.NationalityCode = natCode.String
-	p.KnownForDepartment = dept.String
-	return p, err
-}
-
-// GetPersonDetail fetches a person profile
-func GetPersonDetail(slug string) (models.PersonDetail, error) {
-	var detail models.PersonDetail
-	person, err := GetPersonBySlug(slug)
-	if err != nil {
-		return detail, err
-	}
-	detail.Person = person
-	movies, _ := GetPersonMovies(person.ID)
-	shows, _ := GetPersonShows(person.ID)
-	detail.Movies = movies
-	detail.Shows = shows
-	return detail, nil
 }
 
 // GetPersonByID fetches a single person

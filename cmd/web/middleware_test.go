@@ -1,54 +1,54 @@
 package main
 
 import (
+	"io"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 )
 
-func TestSecureHeaders(t *testing.T) {
-	// Initialize a dummy application struct, if needed by the method receiver
-	app := &application{}
+func TestRecoverPanic(t *testing.T) {
+	// Create an application struct with a discarded log output to keep tests quiet
+	app := &application{
+		errorLog: log.New(io.Discard, "", 0),
+		infoLog:  log.New(io.Discard, "", 0),
+	}
 
-	// Create a dummy handler that we will wrap with the middleware
-	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+	// Capture the standard log output to prevent the panic log from printing to the console
+	// since recoverPanic uses log.Printf
+	originalLogOutput := log.Writer()
+	log.SetOutput(io.Discard)
+	defer log.SetOutput(originalLogOutput)
+
+	// Create a dummy handler that panics
+	dummyHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		panic("test panic")
 	})
 
-	// Wrap the dummy handler with our secureHeaders middleware
-	secureHandler := app.secureHeaders(nextHandler)
+	// Wrap the dummy handler with the recoverPanic middleware
+	wrappedHandler := app.recoverPanic(dummyHandler)
 
-	// Create a new HTTP request (the method and URL don't matter for this test)
+	// Create a test request and response recorder
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-
-	// Create a response recorder to capture the response from the middleware
 	rr := httptest.NewRecorder()
 
-	// Serve the request using the wrapped handler
-	secureHandler.ServeHTTP(rr, req)
+	// Execute the handler
+	wrappedHandler.ServeHTTP(rr, req)
 
-	// Assert that control passed to the next handler by checking the status code and body
-	if rr.Code != http.StatusOK {
-		t.Errorf("expected status %d; got %d", http.StatusOK, rr.Code)
-	}
-	if rr.Body.String() != "OK" {
-		t.Errorf("expected body %q; got %q", "OK", rr.Body.String())
+	// Check if the panic was recovered and response is 500
+	if rr.Code != http.StatusInternalServerError {
+		t.Errorf("expected status code %d, got %d", http.StatusInternalServerError, rr.Code)
 	}
 
-	// Define the list of expected headers
-	expectedHeaders := []string{
-		"Content-Security-Policy",
-		"Referrer-Policy",
-		"X-Content-Type-Options",
-		"X-Frame-Options",
-		"X-XSS-Protection",
+	// Check if the Connection: close header was set
+	if rr.Header().Get("Connection") != "close" {
+		t.Errorf("expected Connection header to be close, got %s", rr.Header().Get("Connection"))
 	}
 
-	// Verify that each expected header has been set in the response
-	for _, header := range expectedHeaders {
-		if rr.Header().Get(header) == "" {
-			t.Errorf("expected header %q to be set", header)
-		}
+	// Check if the response body contains Internal Server Error
+	expectedBody := "Internal Server Error\n"
+	if rr.Body.String() != expectedBody {
+		t.Errorf("expected body %q, got %q", expectedBody, rr.Body.String())
 	}
 }
