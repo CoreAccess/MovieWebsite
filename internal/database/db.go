@@ -944,6 +944,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				// Fetch Credits
 				credits, err := client.FetchMovieCredits(m.ID)
 				if err == nil {
+					type castInsert struct {
+						movieID      int64
+						personID     int64
+						characterID  int64
+						billingOrder int
+					}
+					var castMappings []castInsert
+
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
 						if personSlug == "" {
@@ -971,7 +979,34 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							charID, _ = res.LastInsertId()
 						}
 
-						_, _ = DB.Exec("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", movieID, personID, charID, cast.Order)
+						castMappings = append(castMappings, castInsert{
+							movieID:      movieID,
+							personID:     personID,
+							characterID:  charID,
+							billingOrder: cast.Order,
+						})
+					}
+
+					if len(castMappings) > 0 {
+						chunkSize := 100 // Safe limit for SQLite (max 32766 params, we use 4 per row: 4 * 100 = 400 parameters)
+						for i := 0; i < len(castMappings); i += chunkSize {
+							end := i + chunkSize
+							if end > len(castMappings) {
+								end = len(castMappings)
+							}
+							chunk := castMappings[i:end]
+
+							valueStrings := make([]string, 0, len(chunk))
+							valueArgs := make([]interface{}, 0, len(chunk)*4)
+
+							for _, c := range chunk {
+								valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+								valueArgs = append(valueArgs, c.movieID, c.personID, c.characterID, c.billingOrder)
+							}
+
+							query := fmt.Sprintf("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES %s", strings.Join(valueStrings, ","))
+							_, _ = DB.Exec(query, valueArgs...)
+						}
 					}
 
 					for _, crew := range credits.Crew {
