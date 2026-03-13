@@ -30,7 +30,7 @@ func GetSession(id string) (models.Session, error) {
 
 // UpdateUserProfile updates a user's email and avatar
 func UpdateUserProfile(userID int, email string, avatar string) error {
-	query := `UPDATE user SET email = ?, avatar = ? WHERE id = ?`
+	query := `UPDATE users SET email = ?, avatar = ? WHERE id = ?`
 	_, err := DB.Exec(query, email, avatar, userID)
 	return err
 }
