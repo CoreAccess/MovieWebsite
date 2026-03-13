@@ -1028,6 +1028,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				// Fetch Credits
 				credits, err := client.FetchTVCredits(s.ID)
 				if err == nil {
+					type castMapping struct {
+						SeriesID    int64
+						PersonID    int64
+						CharacterID int64
+						Order       int
+					}
+					var mappings []castMapping
+
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
 						if personSlug == "" {
@@ -1055,7 +1063,36 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							charID, _ = res.LastInsertId()
 						}
 
-						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
+						mappings = append(mappings, castMapping{
+							SeriesID:    seriesID,
+							PersonID:    personID,
+							CharacterID: charID,
+							Order:       cast.Order,
+						})
+					}
+
+					// Batched INSERT for tv_cast
+					chunkSize := 200 // Max ~800 variables (chunkSize * 4 columns)
+					for i := 0; i < len(mappings); i += chunkSize {
+						end := i + chunkSize
+						if end > len(mappings) {
+							end = len(mappings)
+						}
+
+						chunk := mappings[i:end]
+						placeholders := make([]string, len(chunk))
+						args := make([]interface{}, len(chunk)*4)
+
+						for k, m := range chunk {
+							placeholders[k] = "(?, ?, ?, ?)"
+							args[k*4] = m.SeriesID
+							args[k*4+1] = m.PersonID
+							args[k*4+2] = m.CharacterID
+							args[k*4+3] = m.Order
+						}
+
+						query := fmt.Sprintf("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES %s", strings.Join(placeholders, ", "))
+						_, _ = DB.Exec(query, args...)
 					}
 
 					for _, crew := range credits.Crew {
