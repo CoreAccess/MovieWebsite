@@ -948,6 +948,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				// Fetch Credits
 				credits, err := client.FetchMovieCredits(m.ID)
 				if err == nil {
+					type castInsert struct {
+						movieID      int64
+						personID     int64
+						characterID  int64
+						billingOrder int
+					}
+					var castMappings []castInsert
+
 					for _, cast := range credits.Cast {
 						personSlug := tmdb.Slugify(cast.Name)
 						if personSlug == "" {
@@ -975,7 +983,34 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							charID, _ = res.LastInsertId()
 						}
 
-						_, _ = DB.Exec("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", movieID, personID, charID, cast.Order)
+						castMappings = append(castMappings, castInsert{
+							movieID:      movieID,
+							personID:     personID,
+							characterID:  charID,
+							billingOrder: cast.Order,
+						})
+					}
+
+					if len(castMappings) > 0 {
+						chunkSize := 100 // Safe limit for SQLite (max 32766 params, we use 4 per row: 4 * 100 = 400 parameters)
+						for i := 0; i < len(castMappings); i += chunkSize {
+							end := i + chunkSize
+							if end > len(castMappings) {
+								end = len(castMappings)
+							}
+							chunk := castMappings[i:end]
+
+							valueStrings := make([]string, 0, len(chunk))
+							valueArgs := make([]interface{}, 0, len(chunk)*4)
+
+							for _, c := range chunk {
+								valueStrings = append(valueStrings, "(?, ?, ?, ?)")
+								valueArgs = append(valueArgs, c.movieID, c.personID, c.characterID, c.billingOrder)
+							}
+
+							query := fmt.Sprintf("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES %s", strings.Join(valueStrings, ","))
+							_, _ = DB.Exec(query, valueArgs...)
+						}
 					}
 
 					for _, crew := range credits.Crew {
@@ -1118,35 +1153,36 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							}
 						}
 
-						// Fetch Episodes for Season 1
-						episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
-						if err == nil {
-							for _, ep := range episodes {
-								epSlug := tmdb.Slugify(ep.Name)
-								if epSlug == "" {
-									epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
-								}
-								slug := tmdb.Slugify(s.Name)
-								if slug == "" {
-									slug = "show"
-								}
-								epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
+				// Fetch Episodes for Season 1
+				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
+				if err == nil && len(episodes) > 0 {
+					var vals []interface{}
+					var placeholders []string
+
+					for _, ep := range episodes {
+						epSlug := tmdb.Slugify(ep.Name)
+						if epSlug == "" {
+							epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
+						}
+						epSlug = fmt.Sprintf("%s-%s", slug, epSlug)
 
 								var image string
 								if ep.StillPath != "" {
 									image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
 								}
 
-								_, err := DB.Exec(`INSERT INTO tv_episodes
-							(series_id, season_number, episode_number, name, slug, date_published, description, image, duration) 
-							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-									seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+						placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+						vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+					}
 
-								if err != nil {
-									log.Printf("Error inserting episode %s: %v", ep.Name, err)
-								}
-							}
-						}
+					query := fmt.Sprintf(`INSERT INTO tv_episodes
+						(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
+						VALUES %s`, strings.Join(placeholders, ","))
+
+					_, err := DB.Exec(query, vals...)
+
+					if err != nil {
+						log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
 					}
 				}
 			}
