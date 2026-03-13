@@ -1087,7 +1087,10 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 
 				// Fetch Episodes for Season 1
 				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
-				if err == nil {
+				if err == nil && len(episodes) > 0 {
+					var vals []interface{}
+					var placeholders []string
+
 					for _, ep := range episodes {
 						epSlug := tmdb.Slugify(ep.Name)
 						if epSlug == "" {
@@ -1100,14 +1103,18 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
 						}
 
-						_, err := DB.Exec(`INSERT INTO tv_episodes 
-							(series_id, season_number, episode_number, name, slug, date_published, description, image, duration) 
-							VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-							seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+						placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+						vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+					}
 
-						if err != nil {
-							log.Printf("Error inserting episode %s: %v", ep.Name, err)
-						}
+					query := fmt.Sprintf(`INSERT INTO tv_episodes
+						(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
+						VALUES %s`, strings.Join(placeholders, ","))
+
+					_, err := DB.Exec(query, vals...)
+
+					if err != nil {
+						log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
 					}
 				}
 			}
