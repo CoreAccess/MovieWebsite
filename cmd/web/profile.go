@@ -108,9 +108,7 @@ func toggleWatchlistPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect back where they came from
-	referer := r.Header.Get("Referer")
-	if referer == "" {
-		referer = "/profile"
-	}
-	http.Redirect(w, r, referer, http.StatusSeeOther)
+	// Security Fix: Use getSafeReferer to prevent Open Redirect vulnerabilities.
+	safeReferer := getSafeReferer(r, "/profile")
+	http.Redirect(w, r, safeReferer, http.StatusSeeOther)
 }
