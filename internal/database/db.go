@@ -443,6 +443,8 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 						_, _ = DB.Exec("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", movieID, personID, charID, cast.Order)
 					}
 					
+					var crewParams []any
+					var crewPlaceholders []string
 					for _, crew := range credits.Crew {
 						if crew.Job == "Director" || crew.Job == "Writer" || crew.Job == "Screenplay" || crew.Job == "Author" {
 							crewSlug := tmdb.Slugify(crew.Name)
@@ -463,8 +465,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								job = "director"
 							}
 							
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
+							crewParams = append(crewParams, "movie", movieID, personID, job)
+							crewPlaceholders = append(crewPlaceholders, "(?, ?, ?, ?)")
 						}
+					}
+					if len(crewParams) > 0 {
+						crewQuery := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ", "))
+						_, _ = DB.Exec(crewQuery, crewParams...)
 					}
 				}
 			}
@@ -517,6 +524,8 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 					}
 					
+					var crewParams []any
+					var crewPlaceholders []string
 					for _, crew := range credits.Crew {
 						if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
 							crewSlug := tmdb.Slugify(crew.Name)
@@ -537,8 +546,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								job = "director" // mapping series creators/producers as "directors" for UI simplicity
 							}
 							
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+							crewParams = append(crewParams, "tv_series", seriesID, personID, job)
+							crewPlaceholders = append(crewPlaceholders, "(?, ?, ?, ?)")
 						}
+					}
+					if len(crewParams) > 0 {
+						crewQuery := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ", "))
+						_, _ = DB.Exec(crewQuery, crewParams...)
 					}
 				}
 
