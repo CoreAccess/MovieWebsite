@@ -901,7 +901,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		}
 
 		client := tmdb.NewClient(tmdbAPIKey)
-		
+
 		// Pre-seed genres
 		mGenres, err := client.FetchMovieGenres()
 		if err == nil {
@@ -926,9 +926,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		} else {
 			for _, m := range movies {
 				slug := tmdb.Slugify(m.Title)
-				if slug == "" { slug = "movie" }
+				if slug == "" {
+					slug = "movie"
+				}
 				langCode := m.OriginalLanguage
-				if langCode == "" { langCode = "en" }
+				if langCode == "" {
+					langCode = "en"
+				}
 				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
 					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, langCode)
 				if err != nil {
@@ -1010,9 +1014,13 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		} else {
 			for _, s := range shows {
 				slug := tmdb.Slugify(s.Name)
-				if slug == "" { slug = "show" }
+				if slug == "" {
+					slug = "show"
+				}
 				langCode := s.OriginalLanguage
-				if langCode == "" { langCode = "en" }
+				if langCode == "" {
+					langCode = "en"
+				}
 				res, err := DB.Exec("INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
 					s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
 				if err != nil {
@@ -1058,6 +1066,8 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 						_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
 					}
 
+					var crewArgs []interface{}
+					var crewPlaceholders []string
 					for _, crew := range credits.Crew {
 						if crew.Job == "Executive Producer" || crew.Job == "Creator" || crew.Job == "Writer" {
 							crewSlug := tmdb.Slugify(crew.Name)
@@ -1080,8 +1090,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								job = "director" // mapping series creators/producers as "directors" for UI simplicity
 							}
 
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+							crewPlaceholders = append(crewPlaceholders, "(?, ?, ?, ?)")
+							crewArgs = append(crewArgs, "tv_series", seriesID, personID, job)
 						}
+					}
+
+					if len(crewPlaceholders) > 0 {
+						query := fmt.Sprintf("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES %s", strings.Join(crewPlaceholders, ","))
+						_, _ = DB.Exec(query, crewArgs...)
 					}
 				}
 
