@@ -119,9 +119,9 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// Check if the user was trying to access a protected page before logging in.
-	// If 'next' is present and valid (starts with '/'), redirect them there.
+	// If 'next' is present and valid, redirect them there.
 	nextURL := r.PostForm.Get("next")
-	if nextURL != "" && nextURL[0] == '/' {
+	if isSafeRedirect(nextURL) {
 		http.Redirect(w, r, nextURL, http.StatusSeeOther)
 		return
 	}
