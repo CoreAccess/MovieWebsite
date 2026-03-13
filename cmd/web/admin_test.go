@@ -50,7 +50,7 @@ func TestAdminRoleCheck(t *testing.T) {
 				req = req.WithContext(ctx)
 			}
 
-			handler := adminRoleCheck(nextHandler)
+			handler := (&application{}).adminRoleCheck(nextHandler)
 			handler.ServeHTTP(rr, req)
 
 			if rr.Code != tt.expectedStatus {
