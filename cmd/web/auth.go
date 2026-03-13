@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"time"
 
 	"movieweb/internal/database"
@@ -121,7 +122,7 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 	// Check if the user was trying to access a protected page before logging in.
 	// If 'next' is present and valid (starts with '/'), redirect them there.
 	nextURL := r.PostForm.Get("next")
-	if nextURL != "" && nextURL[0] == '/' {
+	if isSafeRedirect(nextURL) {
 		http.Redirect(w, r, nextURL, http.StatusSeeOther)
 		return
 	}
@@ -194,7 +195,7 @@ func (app *application) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 		if user == nil {
 			nextParam := ""
 			if r.Method == "GET" && r.URL.Path != "" {
-				nextParam = "?next=" + r.URL.Path
+				nextParam = "?next=" + url.QueryEscape(r.URL.Path)
 			}
 			http.Redirect(w, r, "/login"+nextParam, http.StatusSeeOther)
 			return

@@ -62,9 +62,6 @@ func (app *application) wikiEditPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Redirect back where they came from
-	referer := r.Header.Get("Referer")
-	if referer == "" {
-		referer = "/"
-	}
+	referer := getSafeReferer(r, "/")
 	http.Redirect(w, r, referer+"?success=edit_submitted", http.StatusSeeOther)
 }
