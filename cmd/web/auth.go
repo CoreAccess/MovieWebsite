@@ -114,7 +114,7 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",       // The cookie is valid for the entire site
 		Expires:  session.ExpiresAt,
 		HttpOnly: true,                    // Mitigates XSS attacks (client-side scripts cannot access the cookie)
-		Secure:   false,                   // Set to true in production if using HTTPS
+		Secure:   true,                    // Mitigates MITM attacks (ensures cookie is only sent over HTTPS)
 		SameSite: http.SameSiteStrictMode, // Mitigates Cross-Site Request Forgery (CSRF)
 	})
 
@@ -142,6 +142,8 @@ func (app *application) logoutPost(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		Expires:  time.Unix(0, 0),
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
 	})
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
