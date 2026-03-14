@@ -1484,7 +1484,11 @@ func GetMovieByID(id int) (models.Movie, error) {
 
 	// Fetch genres
 	genres, _ := GetMovieGenres(m.ID)
-	m.Genres = genres
+	// Map []models.Genre to []string for Schema.org
+	m.Genres = make([]string, len(genres))
+	for i, g := range genres {
+		m.Genres[i] = g.Name
+	}
 
 	return m, err
 }
@@ -1599,7 +1603,11 @@ func GetTVSeriesByID(id int) (models.TVSeries, error) {
 	s.Subtitle = subtitle.String
 
 	genres, _ := GetTVSeriesGenres(s.ID)
-	s.Genres = genres
+	// Map []models.Genre to []string for Schema.org
+	s.Genres = make([]string, len(genres))
+	for i, g := range genres {
+		s.Genres[i] = g.Name
+	}
 
 	return s, err
 }

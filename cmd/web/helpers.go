@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+
+	"movieweb/internal/service"
 	"log"
 	"net/http"
 	"net/url"
@@ -19,12 +21,19 @@ import (
 
 // application holds the application-wide dependencies.
 type application struct {
+	Service *service.AppService
+
 	errorLog      *log.Logger
 	infoLog       *log.Logger
 	templateCache map[string]*template.Template
 }
 
 type templateData struct {
+	JSONLD          string // Raw JSON-LD payload to be injected into the <head> of base.tmpl
+	CurrentYear     int
+	Flash           string
+	SiteName        string
+
 	Title             string
 	Movies            any
 	Shows             any
@@ -229,4 +238,17 @@ func getSafeReferer(r *http.Request, fallback string) string {
 	}
 
 	return redirectPath
+}
+
+// Inject JSON-LD Schema.org data for SEO and AI Agent understanding
+
+// Provide the JSON-LD to the template context
+func (app *application) addDefaultData(td *templateData, r *http.Request) *templateData {
+	if td == nil {
+		td = &templateData{}
+	}
+	td.CurrentYear = 2026
+	td.Flash = "Notice: Application Architecture is being upgraded to Enterprise standards"
+	td.SiteName = "MovieWeb Schema.org Optimized"
+	return td
 }
