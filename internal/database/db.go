@@ -1213,8 +1213,8 @@ func GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
 		orderBy = "date_published DESC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
-	rows, err := DB.Query(query)
+	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY %s LIMIT ? OFFSET ?", orderBy)
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1240,8 +1240,8 @@ func GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) 
 		orderBy = "start_date DESC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
-	rows, err := DB.Query(query)
+	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY %s LIMIT ? OFFSET ?", orderBy)
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1260,8 +1260,8 @@ func GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) 
 }
 
 func GetPopularMovies(limit int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY aggregate_rating DESC LIMIT %d", limit)
-	rows, err := DB.Query(query)
+	query := "SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY aggregate_rating DESC LIMIT ?"
+	rows, err := DB.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1280,8 +1280,8 @@ func GetPopularMovies(limit int) ([]models.Movie, error) {
 }
 
 func GetUpcomingMovies(limit int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY date_published DESC LIMIT %d", limit)
-	rows, err := DB.Query(query)
+	query := "SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY date_published DESC LIMIT ?"
+	rows, err := DB.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1300,8 +1300,8 @@ func GetUpcomingMovies(limit int) ([]models.Movie, error) {
 }
 
 func GetPopularShows(limit int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY aggregate_rating DESC LIMIT %d", limit)
-	rows, err := DB.Query(query)
+	query := "SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY aggregate_rating DESC LIMIT ?"
+	rows, err := DB.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1320,8 +1320,8 @@ func GetPopularShows(limit int) ([]models.TVSeries, error) {
 }
 
 func GetNewShows(limit int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY start_date DESC LIMIT %d", limit)
-	rows, err := DB.Query(query)
+	query := "SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY start_date DESC LIMIT ?"
+	rows, err := DB.Query(query, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -1345,8 +1345,8 @@ func GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
 		orderBy = "name ASC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
-	rows, err := DB.Query(query)
+	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people ORDER BY %s LIMIT ? OFFSET ?", orderBy)
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1365,8 +1365,8 @@ func GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
 }
 
 func SearchMovies(searchQuery string, limit int, offset int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(query, "%"+searchQuery+"%")
+	query := "SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies WHERE name LIKE ? COLLATE NOCASE LIMIT ? OFFSET ?"
+	rows, err := DB.Query(query, "%"+searchQuery+"%", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1385,8 +1385,8 @@ func SearchMovies(searchQuery string, limit int, offset int) ([]models.Movie, er
 }
 
 func SearchShows(searchQuery string, limit int, offset int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(query, "%"+searchQuery+"%")
+	query := "SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series WHERE name LIKE ? COLLATE NOCASE LIMIT ? OFFSET ?"
+	rows, err := DB.Query(query, "%"+searchQuery+"%", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1405,8 +1405,8 @@ func SearchShows(searchQuery string, limit int, offset int) ([]models.TVSeries, 
 }
 
 func SearchPeople(searchQuery string, limit int, offset int) ([]models.Person, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(query, "%"+searchQuery+"%")
+	query := "SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people WHERE name LIKE ? COLLATE NOCASE LIMIT ? OFFSET ?"
+	rows, err := DB.Query(query, "%"+searchQuery+"%", limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -1425,8 +1425,8 @@ func SearchPeople(searchQuery string, limit int, offset int) ([]models.Person, e
 }
 
 func GetAllUsers(limit int, offset int) ([]models.User, error) {
-	query := fmt.Sprintf("SELECT id, username, email, COALESCE(avatar, ''), COALESCE(reputation_score, 0), COALESCE(role, 'user') FROM users LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(query)
+	query := "SELECT id, username, email, COALESCE(avatar, ''), COALESCE(reputation_score, 0), COALESCE(role, 'user') FROM users LIMIT ? OFFSET ?"
+	rows, err := DB.Query(query, limit, offset)
 	if err != nil {
 		return nil, err
 	}
