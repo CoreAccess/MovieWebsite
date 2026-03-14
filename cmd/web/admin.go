@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"net/http"
 	"net/url"
 )
@@ -40,11 +39,11 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 		if user.Role != "admin" {
 			// Security Audit: Log unauthorized access attempts to the admin area.
 			// This helps administrators monitor for potential malicious behavior.
-			log.Printf("SECURITY: Unauthorized admin access attempt by User ID %d (%s) on %s", user.ID, user.Username, r.URL.Path)
+			app.errorLog.Printf("SECURITY: Unauthorized admin access attempt by User ID %d (%s) on %s", user.ID, user.Username, r.URL.Path)
 
 			// If the user is authenticated but doesn't have the required role,
 			// we return a 403 Forbidden status code.
-			http.Error(w, "Forbidden: Admin access required", http.StatusForbidden)
+			app.clientError(w, http.StatusForbidden)
 			return
 		}
 
@@ -61,7 +60,7 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 	// Fast counting logic for MVP metrics from service layer
 	userCount, mediaCount, err := app.Service.GetAdminMetrics()
 	if err != nil {
-		log.Println("Error fetching admin metrics:", err)
+		app.errorLog.Println("Error fetching admin metrics:", err)
 	}
 
 	data.UserCount = userCount
