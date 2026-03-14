@@ -1,12 +1,9 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"net/http"
 	"net/url"
-
-	"movieweb/internal/database"
 )
 
 // adminRoleCheck is a middleware that restricts access to admin-only routes.
@@ -36,7 +33,7 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 		// Security Fix: Explicitly check the user's role.
 		// We only allow users with the 'admin' role to proceed to administrative functions.
 		// This prevents regular users or moderators from accessing the admin dashboard
-		// and performing sensitive actions like approving/rejecting wiki edits.
+		// and performing sensitive administrative actions.
 		//
 		// Why this is important: Even if a user is authenticated, they should only have access
 		// to resources that their role permits (Principle of Least Privilege).
@@ -61,55 +58,14 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 
 	data := app.getTemplateData("Admin Dashboard", r)
 
-	// Fast counting logic for MVP metrics
-	var userCount, mediaCount, pendingEdits, activeAds int
-	query := `
-		SELECT
-			(SELECT COUNT(*) FROM users),
-			(SELECT COUNT(*) FROM movies) + (SELECT COUNT(*) FROM tv_series),
-			(SELECT COUNT(*) FROM edit_suggestions WHERE status = 'pending'),
-			(SELECT COUNT(*) FROM ad_campaigns)
-	`
-	database.DB.QueryRow(query).Scan(&userCount, &mediaCount, &pendingEdits, &activeAds)
+	// Fast counting logic for MVP metrics from service layer
+	userCount, mediaCount, err := app.Service.GetAdminMetrics()
+	if err != nil {
+		log.Println("Error fetching admin metrics:", err)
+	}
 
 	data.UserCount = userCount
 	data.MediaCount = mediaCount
-	data.PendingEdits = pendingEdits
-	data.ActiveAds = activeAds
-
-	// Fetch pending wiki suggestions
-	suggestions, _ := database.GetPendingWikiEdits()
-	data.EditSuggestions = suggestions
 
 	app.render(w, http.StatusOK, "admin.html", data)
-}
-
-// wikiApprovePost handles approving an edit
-func (app *application) wikiApprovePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil || r.PostForm.Get("suggestion_id") == "" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	var suggestionID int
-	fmt.Sscanf(r.PostForm.Get("suggestion_id"), "%d", &suggestionID)
-
-	database.ApproveWikiEdit(suggestionID)
-	http.Redirect(w, r, "/admin?success=approved", http.StatusSeeOther)
-}
-
-// wikiRejectPost handles rejecting an edit
-func (app *application) wikiRejectPost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil || r.PostForm.Get("suggestion_id") == "" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
-
-	var suggestionID int
-	fmt.Sscanf(r.PostForm.Get("suggestion_id"), "%d", &suggestionID)
-
-	database.RejectWikiEdit(suggestionID)
-	http.Redirect(w, r, "/admin?success=rejected", http.StatusSeeOther)
 }

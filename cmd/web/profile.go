@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"log"
-	"movieweb/internal/database"
 	"net/http"
 )
 
@@ -13,7 +12,7 @@ func (app *application) profileView(w http.ResponseWriter, r *http.Request) {
 	data := app.getTemplateData("My Profile", r)
 	user := app.getUser(r)
 	if user != nil {
-		watchlists, err := database.GetUserWatchlists(user.ID)
+		watchlists, err := app.Service.GetUserWatchlists(user.ID)
 		if err == nil {
 			data.Watchlists = watchlists
 		}
@@ -40,7 +39,7 @@ func (app *application) profileEditPost(w http.ResponseWriter, r *http.Request) 
 	avatar := r.PostForm.Get("avatarUrl")
 
 	// Update the database
-	err = database.UpdateUserProfile(user.ID, email, avatar)
+	err = app.Service.UpdateUserProfile(user.ID, email, avatar)
 	if err != nil {
 		log.Println("Error updating profile:", err)
 		http.Redirect(w, r, "/profile?error=update_failed", http.StatusSeeOther)
@@ -66,12 +65,12 @@ func (app *application) toggleWatchlistPost(w http.ResponseWriter, r *http.Reque
 	}
 
 	// Simplification: Auto-create a default watchlist if the user has none
-	watchlists, err := database.GetUserWatchlists(user.ID)
+	watchlists, err := app.Service.GetUserWatchlists(user.ID)
 	var watchlistID int
 	if err != nil || len(watchlists) == 0 {
-		database.CreateWatchlist(user.ID, "My Watchlist", "Stuff I want to watch")
+		app.Service.CreateWatchlist(user.ID, "My Watchlist", "Stuff I want to watch")
 		// Fetch again to get the new ID
-		watchlists, _ = database.GetUserWatchlists(user.ID)
+		watchlists, _ = app.Service.GetUserWatchlists(user.ID)
 	}
 	if len(watchlists) > 0 {
 		watchlistID = watchlists[0].ID
@@ -85,7 +84,7 @@ func (app *application) toggleWatchlistPost(w http.ResponseWriter, r *http.Reque
 	fmt.Sscanf(mediaIDStr, "%d", &mediaID)
 	mediaType := r.PostForm.Get("media_type")
 
-	err = database.AddToWatchlist(watchlistID, mediaType, mediaID)
+	err = app.Service.AddToWatchlist(watchlistID, mediaType, mediaID)
 	if err != nil {
 		log.Println("Error adding to watchlist:", err)
 	}

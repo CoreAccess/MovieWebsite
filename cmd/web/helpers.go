@@ -13,7 +13,6 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"movieweb/internal/database"
 	"movieweb/internal/models"
 
 	"github.com/justinas/nosurf"
@@ -52,17 +51,10 @@ type templateData struct {
 	AuthenticatedUser *models.User
 	CSRFToken         string
 	Watchlists        []models.Watchlist
-	EbayListings      []models.EbayListing
-	Ads               []models.Advertisement
 	EntityType        string
 	EntityID          int
 	UserCount         int
 	MediaCount        int
-	PendingEdits      int
-	ActiveAds         int
-	EditSuggestions   []database.EditSuggestion
-	AdCampaigns       []database.AdCampaign
-	AdsList           []database.Advertisement
 	Sort              string
 	Next              string
 }
@@ -145,9 +137,9 @@ func (app *application) notFound(w http.ResponseWriter) {
 
 // getTemplateData returns a pointer to a templateData struct initialized with common dynamic data.
 func (app *application) getTemplateData(title string, r *http.Request) *templateData {
-	movies, _ := database.GetAllMovies(10, 0, "")
-	shows, _ := database.GetAllShows(10, 0, "")
-	users, _ := database.GetAllUsers(10, 0)
+	movies, _ := app.Service.GetAllMovies(10, 0, "")
+	shows, _ := app.Service.GetAllShows(10, 0, "")
+	users, _ := app.Service.GetAllUsers(10, 0)
 
 	var authUser *models.User
 	var csrfToken string

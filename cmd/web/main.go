@@ -1,13 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"os"
 
 	"movieweb/internal/config"
-	"movieweb/internal/database"
-
 	"movieweb/internal/repository/dbrepo"
 	"movieweb/internal/service"
 )
@@ -32,17 +31,29 @@ func main() {
 		infoLog.Println("Note: Using hardcoded TMDB API key. If you see 401 Unauthorized errors, please set the TMDB_ACCESS_TOKEN or TMDB_API_KEY environment variable.")
 	}
 	
-		// LEGACY INIT: Keep the old global DB connection alive for un-migrated handlers
-	if _, err := database.InitDB("./streamline.db", tmdbKey); err != nil {
-		errorLog.Fatalf("Failed to initialize database: %v\n", err)
+	// PostgreSQL connection parameters
+	dbHost := os.Getenv("DB_HOST")
+	dbName := os.Getenv("DB_NAME")
+	dbUser := os.Getenv("DB_USER")
+	dbPass := os.Getenv("DB_PASS")
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		dbPort = "5432"
 	}
 
-	// Create the SQLite repository mapping (Phase 3 N-Tier Layering)
-	sqliteRepo := &dbrepo.SqliteDBRepo{DB: database.DB} // Use the same connection for now
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", 
+		dbHost, dbPort, dbUser, dbPass, dbName)
+
+	// Create the PostgreSQL repository mapping
+	pgRepo := &dbrepo.PostgresDBRepo{}
+	db, err := pgRepo.InitDB(dsn, tmdbKey)
+	if err != nil {
+		errorLog.Fatalf("Failed to initialize PostgreSQL database: %v\n", err)
+	}
+	defer db.Close()
 
 	// Create the Service layer to encapsulate business logic and Vector integration readiness
-	appService := service.NewAppService(sqliteRepo)
-
+	appService := service.NewAppService(pgRepo)
 
 	templateCache, err := newTemplateCache()
 	if err != nil {

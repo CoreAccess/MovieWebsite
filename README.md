@@ -1,14 +1,13 @@
 # MovieWeb
 
-MovieWeb is a Go-based web application for managing and exploring a media database of movies, TV shows, and people. It features user accounts, watchlists, social feeds, wiki-style editing, admin moderation, and monetization hooks (such as eBay affiliate listings and ad campaigns).
+MovieWeb is a Go-based web application for managing and exploring a media database of movies, TV shows, and people. It features user accounts, watchlists, social feeds, and admin moderation.
 
 ## Features
 
 - **Media Database:** Browse, search, and view detailed profiles for movies, TV shows, and cast/crew members.
 - **User Accounts:** Sign up, log in, manage profiles, and maintain a personalized watchlist.
 - **Social & Engagement:** View a personalized feed, post updates, and engage with community polls and comments.
-- **Community Wiki:** Users can suggest edits to media entries, which administrators can approve or reject.
-- **Monetization:** Built-in support for displaying advertisements, managing ad campaigns, and integrating affiliate links (e.g., eBay listings).
+
 - **Security:** Built-in CSRF protection using `nosurf`.
 
 ## Tech Stack
@@ -23,10 +22,10 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
 - `cmd/web/`: Contains the main application entry point and HTTP handlers.
 - `internal/database/`: Database initialization and query functions.
 - `internal/models/`: Go structs defining the application's data models.
-- `internal/monetization/`: Logic for handling ads and affiliate listings.
+
 - `internal/tmdb/`: Client for interacting with the TMDB API.
 - `ui/`: Contains HTML templates (`ui/html/`) and static assets (`ui/static/`).
-- `DATABASE_RESTRUCTURING_PLAN.md`: Documentation for planned future schema updates and monetization strategies.
+- `DATABASE_RESTRUCTURING_PLAN.md`: Documentation for planned future schema updates.
 
 ## Getting Started
 
@@ -65,4 +64,4 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
 
 ## Future Roadmap
 
-A comprehensive restructuring of the database is planned to normalize schemas, integrate deeper monetization (affiliate tracking), and adopt schema.org structured data. See the `DATABASE_RESTRUCTURING_PLAN.md` file for full details.
+A comprehensive restructuring of the database is planned to normalize schemas and adopt schema.org structured data. See the `DATABASE_RESTRUCTURING_PLAN.md` file for full details.

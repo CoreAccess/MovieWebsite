@@ -36,9 +36,10 @@ type Media struct {
 type Movie struct {
 	Media          // Embeds the base Media fields
 	ReleaseDate    string  `json:"-"` // Maps to DatePublished internally
-	Runtime        int     `json:"duration,omitempty"` // In minutes (will be converted to ISO 8601 for JSON-LD)
+	Duration        int     `json:"duration,omitempty"` // In minutes (will be converted to ISO 8601 for JSON-LD)
+	ContentRating    string
 	TmdbID           int     `json:"-"`
-	Genres           []string `json:"genre,omitempty"`
+	Genres           []Genre `json:"genre,omitempty"`
 	RatingCount      int
 	ReviewCount      int
 	BestRating       float64
@@ -59,8 +60,9 @@ type TVSeries struct {
 	EndDate          string `json:"endDate,omitempty"`
 	NumberOfSeasons  int    `json:"numberOfSeasons,omitempty"`
 	NumberOfEpisodes int    `json:"numberOfEpisodes,omitempty"`
+	ContentRating    string
 	TmdbID           int    `json:"-"`
-	Genres           []string `json:"genre,omitempty"`
+	Genres           []Genre `json:"genre,omitempty"`
 	RatingCount      int
 	ReviewCount      int
 	BestRating       float64
@@ -80,7 +82,7 @@ type Person struct {
 	Biography       string    `json:"description,omitempty"`
 	Image           string    `json:"image,omitempty"`
 	Gender          string    `json:"gender,omitempty"`
-	PlaceOfBirth    string    `json:"birthPlace,omitempty"`
+	BirthPlace    string    `json:"birthPlace,omitempty"`
 	Birthday        string    `json:"birthDate,omitempty"`
 	Deathday        string    `json:"deathDate,omitempty"`
 	BirthDate       string
@@ -137,19 +139,6 @@ type WatchlistItem struct {
 	AddedAt     time.Time
 }
 
-type EditSuggestion struct {
-	ID         int
-	UserID     int
-	EntityType string
-	EntityID   int
-	FieldName  string
-	OldValue   string
-	NewValue   string
-	Status     string
-	CreatedAt  time.Time
-	ApprovedAt *time.Time
-}
-
 type Post struct {
 	ID        int
 	UserID    int
@@ -167,23 +156,7 @@ type Session struct {
 	CreatedAt time.Time
 }
 
-type Advertisement struct {
-	ID          int
-	CampaignID  int
-	Title       string
-	Description string
-	Image       string
-	Url         string
-}
 
-type EbayListing struct {
-	ID          int
-	Title       string
-	ImageUrl    string
-	Url         string
-	Price       string
-	IsHot       bool
-}
 
 type Genre struct {
 	ID   int

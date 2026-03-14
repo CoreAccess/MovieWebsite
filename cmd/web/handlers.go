@@ -5,9 +5,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"movieweb/internal/database"
 	"movieweb/internal/models"
-	"movieweb/internal/monetization"
 )
 
 func (app *application) movieView(w http.ResponseWriter, r *http.Request) {
@@ -28,22 +26,24 @@ func (app *application) movieView(w http.ResponseWriter, r *http.Request) {
 
 	// We use this to convert our HTML files into executable templates.
 
-	// Fetch the complete movie details (including cast, crew, etc.) from the database layer.
-	detail, err := database.GetMovieDetail(id)
+	// Fetch the complete movie details from the service layer.
+	movie, cast, _, _, err := app.Service.GetMovieDetail(id, r.Host)
 	if err != nil {
 		log.Println("Error fetching movie details:", err)
-		app.notFound(w) // Show a 404 if the movie doesn't exist in the DB
+		app.notFound(w) 
 		return
 	}
 
-	// Prepare the template data structure. getTemplateData gives us common data (like nav info).
+	detail := models.MovieDetail{
+		Movie: *movie,
+		Cast: cast,
+	}
+	// Note: Directors/Writers would be filtered from crew
+
+	// Prepare the template data structure.
 	data := app.getTemplateData(detail.Movie.Name, r)
 	data.MovieDetail = detail
-	// Fetch real-time affiliate listings for monetization based on the movie's name.
-	data.EbayListings = monetization.FetchEbayListings(detail.Movie.Name)
 
-	// Execute the "base" template, passing in our data structure.
-	// This generates the final HTML and writes it to the http.ResponseWriter (w) to send to the client.
 	app.render(w, http.StatusOK, "movies.html", data)
 }
 
@@ -54,19 +54,18 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := app.getTemplateData("Home", r)
-	data.Ads = monetization.FetchAdvertisements("home")
 
-	// Fetch data for guest view, which is the default view for the home page
-	popularMovies, _ := database.GetPopularMovies(10)
+	// Fetch data for guest view from service layer
+	popularMovies, _ := app.Service.GetPopularMovies(10)
 	data.PopularMovies = popularMovies
 
-	upcomingMovies, _ := database.GetUpcomingMovies(10)
+	upcomingMovies, _ := app.Service.GetUpcomingMovies(10)
 	data.UpcomingMovies = upcomingMovies
 
-	popularShows, _ := database.GetPopularShows(10)
+	popularShows, _ := app.Service.GetPopularShows(10)
 	data.PopularShows = popularShows
 
-	newShows, _ := database.GetNewShows(10)
+	newShows, _ := app.Service.GetNewShows(10)
 	data.NewShows = newShows
 
 	app.render(w, http.StatusOK, "index.html", data)
@@ -75,7 +74,6 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 func (app *application) myFeedView(w http.ResponseWriter, r *http.Request) {
 
 	data := app.getTemplateData("My Feed", r)
-	data.Ads = monetization.FetchAdvertisements("home")
 
 	app.render(w, http.StatusOK, "my-feed.html", data)
 }
@@ -89,16 +87,28 @@ func (app *application) tvView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail, err := database.GetTVSeriesDetail(id)
+	show, cast, creators, episodes, _, err := app.Service.GetShowDetail(id, r.Host)
 	if err != nil {
 		log.Println("Error fetching series details:", err)
 		app.notFound(w)
 		return
 	}
 
-	data := app.getTemplateData(detail.Series.Name, r)
+	creatorsPersons := make([]models.Person, len(creators))
+	for i, c := range creators {
+		creatorsPersons[i] = c.Person
+	}
+
+	detail := models.TVSeriesDetail{
+		TVSeries: *show,
+		Cast:     cast,
+		Creators: creatorsPersons,
+		Episodes: episodes,
+		Series:   *show, // For backward compatibility if needed in templates
+	}
+
+	data := app.getTemplateData(detail.TVSeries.Name, r)
 	data.TVSeriesDetail = detail
-	data.EbayListings = monetization.FetchEbayListings(detail.Series.Name)
 
 	app.render(w, http.StatusOK, "tv_shows.html", data)
 }
@@ -112,11 +122,17 @@ func (app *application) personView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	detail, err := database.GetPersonDetailByID(id)
+	person, movies, shows, _, err := app.Service.GetPersonDetail(id, r.Host)
 	if err != nil {
 		log.Println("Error fetching person details:", err)
 		app.notFound(w)
 		return
+	}
+
+	detail := models.PersonDetail{
+		Person: *person,
+		Movies: movies,
+		Shows:  shows,
 	}
 
 	data := app.getTemplateData(detail.Person.Name, r)
@@ -143,7 +159,7 @@ func (app *application) moviesListView(w http.ResponseWriter, r *http.Request) {
 	limit := 24
 	offset := (page - 1) * limit
 
-	movies, err := database.GetAllMovies(limit, offset, sortParam)
+	movies, err := app.Service.GetAllMovies(limit, offset, sortParam)
 	if err == nil {
 		data.Movies = movies
 	}
@@ -169,7 +185,7 @@ func (app *application) showsListView(w http.ResponseWriter, r *http.Request) {
 	limit := 24
 	offset := (page - 1) * limit
 
-	shows, err := database.GetAllShows(limit, offset, sortParam)
+	shows, err := app.Service.GetAllShows(limit, offset, sortParam)
 	if err == nil {
 		data.Shows = shows
 	}
@@ -195,7 +211,7 @@ func (app *application) peopleListView(w http.ResponseWriter, r *http.Request) {
 	limit := 24
 	offset := (page - 1) * limit
 
-	people, err := database.GetAllPeople(limit, offset, sortParam)
+	people, err := app.Service.GetAllPeople(limit, offset, sortParam)
 	if err == nil {
 		data.People = people
 	}
@@ -225,12 +241,12 @@ func (app *application) searchView(w http.ResponseWriter, r *http.Request) {
 
 	if filter == "movies" || filter == "" {
 		if q != "" {
-			movies, err := database.SearchMovies(q, limit, offset)
+			movies, err := app.Service.SearchMovies(q, limit, offset)
 			if err == nil {
 				data.Movies = movies
 			}
 		} else {
-			movies, err := database.GetAllMovies(limit, offset, "")
+			movies, err := app.Service.GetAllMovies(limit, offset, "")
 			if err == nil {
 				data.Movies = movies
 			}
@@ -239,12 +255,12 @@ func (app *application) searchView(w http.ResponseWriter, r *http.Request) {
 
 	if filter == "tv" || filter == "" {
 		if q != "" {
-			shows, err := database.SearchShows(q, limit, offset)
+			shows, err := app.Service.SearchShows(q, limit, offset)
 			if err == nil {
 				data.Shows = shows
 			}
 		} else {
-			shows, err := database.GetAllShows(limit, offset, "")
+			shows, err := app.Service.GetAllShows(limit, offset, "")
 			if err == nil {
 				data.Shows = shows
 			}
@@ -253,12 +269,12 @@ func (app *application) searchView(w http.ResponseWriter, r *http.Request) {
 
 	if filter == "people" || filter == "" {
 		if q != "" {
-			people, err := database.SearchPeople(q, limit, offset)
+			people, err := app.Service.SearchPeople(q, limit, offset)
 			if err == nil {
 				data.People = people
 			}
 		} else {
-			people, err := database.GetAllPeople(limit, offset, "")
+			people, err := app.Service.GetAllPeople(limit, offset, "")
 			if err == nil {
 				data.People = people
 			}
@@ -283,7 +299,7 @@ func (app *application) watchlistView(w http.ResponseWriter, r *http.Request) {
 
 	data := app.getTemplateData("My Watchlist", r)
 
-	movies, shows, err := database.GetUserWatchlist(data.AuthenticatedUser.ID)
+	movies, shows, err := app.Service.GetUserWatchlist(data.AuthenticatedUser.ID)
 	if err != nil {
 		log.Println("Error fetching watchlist:", err)
 		http.Error(w, "Internal Server Error", 500)

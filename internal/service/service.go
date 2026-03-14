@@ -48,28 +48,33 @@ func (s *AppService) GetMovieDetail(id int, baseDomain string) (*models.Movie, [
 }
 
 // GetShowDetail fetches a TV show, its cast, and its generated JSON-LD.
-func (s *AppService) GetShowDetail(id int, baseDomain string) (*models.TVSeries, []models.CastMember, []models.CrewMember, string, error) {
+func (s *AppService) GetShowDetail(id int, baseDomain string) (*models.TVSeries, []models.CastMember, []models.CrewMember, []models.TVEpisode, string, error) {
 	show, err := s.Repo.GetShowByID(id)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, nil, "", err
 	}
 
 	cast, err := s.Repo.GetCastForMedia(show.ID)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, nil, "", err
 	}
 
 	crew, err := s.Repo.GetCrewForMedia(show.ID)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, nil, "", err
 	}
 
 	jsonld, err := metadata.GenerateTVSeriesJSONLD(*show, baseDomain)
 	if err != nil {
-		return nil, nil, nil, "", err
+		return nil, nil, nil, nil, "", err
 	}
 
-	return show, cast, crew, jsonld, nil
+	episodes, err := s.Repo.GetTVEpisodes(id)
+	if err != nil {
+		return nil, nil, nil, nil, "", err
+	}
+
+	return show, cast, crew, episodes, jsonld, nil
 }
 
 // GetPersonDetail fetches a person, their credited works, and generated JSON-LD.
@@ -95,4 +100,100 @@ func (s *AppService) GetPersonDetail(id int, baseDomain string) (*models.Person,
 	}
 
 	return person, movies, shows, jsonld, nil
+}
+
+// Listing Operations
+func (s *AppService) GetPopularMovies(limit int) ([]models.Movie, error) {
+	return s.Repo.GetPopularMovies(limit)
+}
+
+func (s *AppService) GetUpcomingMovies(limit int) ([]models.Movie, error) {
+	return s.Repo.GetUpcomingMovies(limit)
+}
+
+func (s *AppService) GetPopularShows(limit int) ([]models.TVSeries, error) {
+	return s.Repo.GetPopularShows(limit)
+}
+
+func (s *AppService) GetNewShows(limit int) ([]models.TVSeries, error) {
+	return s.Repo.GetNewShows(limit)
+}
+
+func (s *AppService) GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
+	return s.Repo.GetAllMovies(limit, offset, sort)
+}
+
+func (s *AppService) GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) {
+	return s.Repo.GetAllShows(limit, offset, sort)
+}
+
+func (s *AppService) GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
+	return s.Repo.GetAllPeople(limit, offset, sort)
+}
+
+func (s *AppService) GetUserWatchlist(userID int) ([]models.Movie, []models.TVSeries, error) {
+	return s.Repo.GetUserWatchlist(userID)
+}
+
+func (s *AppService) GetUserWatchlists(userID int) ([]models.Watchlist, error) {
+	return s.Repo.GetUserWatchlists(userID)
+}
+
+func (s *AppService) CreateWatchlist(userID int, name, description string) error {
+	return s.Repo.CreateWatchlist(userID, name, description)
+}
+
+func (s *AppService) AddToWatchlist(watchlistID int, mediaType string, mediaID int) error {
+	return s.Repo.AddToWatchlist(watchlistID, mediaType, mediaID)
+}
+
+// User & Session Operations
+func (s *AppService) CreateUser(username, email, hash string) error {
+	return s.Repo.CreateUser(username, email, hash)
+}
+
+func (s *AppService) GetUserByEmail(email string) (models.User, error) {
+	return s.Repo.GetUserByEmail(email)
+}
+
+func (s *AppService) GetUserByID(id int) (models.User, error) {
+	return s.Repo.GetUserByID(id)
+}
+
+func (s *AppService) GetAllUsers(limit int, offset int) ([]models.User, error) {
+	return s.Repo.GetAllUsers(limit, offset)
+}
+
+func (s *AppService) UpdateUserProfile(userID int, email string, avatar string) error {
+	return s.Repo.UpdateUserProfile(userID, email, avatar)
+}
+
+func (s *AppService) CreateSession(session models.Session) error {
+	return s.Repo.CreateSession(session)
+}
+
+func (s *AppService) GetSession(id string) (models.Session, error) {
+	return s.Repo.GetSession(id)
+}
+
+func (s *AppService) DeleteSession(id string) error {
+	return s.Repo.DeleteSession(id)
+}
+
+// Admin & Moderation Operations
+func (s *AppService) GetAdminMetrics() (userCount, mediaCount int, err error) {
+	return s.Repo.GetAdminMetrics()
+}
+
+// Search Operations
+func (s *AppService) SearchMovies(q string, limit int, offset int) ([]models.Movie, error) {
+	return s.Repo.SearchMovies(q, limit, offset)
+}
+
+func (s *AppService) SearchShows(q string, limit int, offset int) ([]models.TVSeries, error) {
+	return s.Repo.SearchShows(q, limit, offset)
+}
+
+func (s *AppService) SearchPeople(q string, limit int, offset int) ([]models.Person, error) {
+	return s.Repo.SearchPeople(q, limit, offset)
 }

@@ -21,22 +21,21 @@ var DB *sql.DB
 // dataSourceName specifies the path to the SQLite file (e.g., "./streamline.db").
 func InitDB(dataSourceName string, tmdbAPIKey string) (*sql.DB, error) {
 	var err error
-	// sql.Open initializes a connection pool for a specific driver ("sqlite" here).
-	// It doesn't actually connect to the database yet.
 	DB, err = sql.Open("sqlite", dataSourceName)
 	if err != nil {
 		return nil, err
 	}
 
-	// Ping actually establishes a connection and verifies that the database is reachable.
 	if err = DB.Ping(); err != nil {
 		return nil, err
 	}
 
 	log.Println("Connected to SQLite Database")
-	// Run the schema creation query to ensure all tables exist before proceeding.
+	
+	// Phase 1 Supertype Migrations
+	ExecuteSchemaOrgMigrations(DB)
+	
 	createTables()
-	// Populate initial movie/show/actor data if the `movies` table has 0 rows.
 	seedDataIfEmpty(tmdbAPIKey)
 	return DB, nil
 }
@@ -377,56 +376,6 @@ func createTables() {
 		FOREIGN KEY(user_id) REFERENCES users(id)
 	);
 
-	CREATE TABLE IF NOT EXISTS edit_history (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER NOT NULL,
-		entity_type TEXT NOT NULL,
-		entity_id INTEGER NOT NULL,
-		field TEXT NOT NULL,
-		old_value TEXT,
-		new_value TEXT,
-		approved BOOLEAN DEFAULT 0,
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY(user_id) REFERENCES users(id)
-	);
-
-	CREATE TABLE IF NOT EXISTS edit_suggestions (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		user_id INTEGER NOT NULL,
-		entity_type TEXT NOT NULL,
-		entity_id INTEGER NOT NULL,
-		suggested_data TEXT NOT NULL,
-		status TEXT DEFAULT 'pending',
-		created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-		FOREIGN KEY(user_id) REFERENCES users(id)
-	);
-
-	CREATE TABLE IF NOT EXISTS ad_campaigns (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		company_id INTEGER NOT NULL,
-		budget REAL DEFAULT 0.0,
-		impressions INTEGER DEFAULT 0,
-		clicks INTEGER DEFAULT 0,
-		start_date TIMESTAMP,
-		end_date TIMESTAMP
-	);
-
-	CREATE TABLE IF NOT EXISTS campaign_targets (
-		campaign_id INTEGER NOT NULL,
-		page_slug TEXT NOT NULL,
-		PRIMARY KEY(campaign_id, page_slug),
-		FOREIGN KEY(campaign_id) REFERENCES ad_campaigns(id)
-	);
-
-	CREATE TABLE IF NOT EXISTS advertisements (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		campaign_id INTEGER NOT NULL,
-		image TEXT,
-		url TEXT,
-		title TEXT,
-		description TEXT,
-		FOREIGN KEY(campaign_id) REFERENCES ad_campaigns(id)
-	);
 
 	CREATE TABLE IF NOT EXISTS posts (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -875,9 +824,9 @@ func createTables() {
 
 func seedDataIfEmpty(tmdbAPIKey string) {
 	var count int
-	err := DB.QueryRow("SELECT COUNT(*) FROM movies").Scan(&count)
+	err := DB.QueryRow("SELECT COUNT(*) FROM media").Scan(&count)
 	if err != nil {
-		log.Fatalf("Error checking movies table: %v\n", err)
+		log.Printf("Note: media table might not be seeded yet: %v\n", err)
 	}
 
 	if count == 0 {
@@ -944,16 +893,21 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				if langCode == "" {
 					langCode = "en"
 				}
-				res, err := DB.Exec("INSERT INTO movies (name, slug, date_published, aggregate_rating, description, image, language_code) VALUES (?, ?, ?, ?, ?, ?, ?)",
-					m.Title, slug, m.ReleaseDate, m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, langCode)
+				res, err := DB.Exec("INSERT INTO media (media_type, name, slug, date_published, content_rating, aggregate_rating, description, image, language_code, tmdb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					"Movie", m.Title, slug, m.ReleaseDate, "", m.VoteAverage, m.Overview, "https://image.tmdb.org/t/p/w500"+m.PosterPath, m.OriginalLanguage, m.ID)
 				if err != nil {
-					log.Printf("Error inserting movie %s: %v", m.Title, err)
+					log.Printf("Error inserting media (movie) %s: %v", m.Title, err)
 					continue
 				}
-				movieID, _ := res.LastInsertId()
+				mediaID, _ := res.LastInsertId()
+				
+				_, err = DB.Exec("INSERT INTO movies (media_id, duration) VALUES (?, ?)", mediaID, 0)
+				if err != nil {
+					log.Printf("Error inserting movie subtype %d: %v", mediaID, err)
+				}
 
 				for _, gID := range m.GenreIDs {
-					_, _ = DB.Exec("INSERT INTO movie_genres (movie_id, genre_id) VALUES (?, ?)", movieID, gID)
+					_, _ = DB.Exec("INSERT INTO movie_genres (movie_id, genre_id) VALUES (?, ?)", mediaID, gID)
 				}
 
 				// Fetch Credits
@@ -995,7 +949,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 						}
 
 						castMappings = append(castMappings, castInsert{
-							movieID:      movieID,
+							movieID:      mediaID,
 							personID:     personID,
 							characterID:  charID,
 							billingOrder: cast.Order,
@@ -1019,7 +973,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								valueArgs = append(valueArgs, c.movieID, c.personID, c.characterID, c.billingOrder)
 							}
 
-							query := fmt.Sprintf("INSERT INTO movie_cast (movie_id, person_id, character_id, billing_order) VALUES %s", strings.Join(valueStrings, ","))
+							query := fmt.Sprintf("INSERT INTO media_cast (media_id, person_id, character_name, list_order) VALUES %s", strings.Join(valueStrings, ","))
 							_, _ = DB.Exec(query, valueArgs...)
 						}
 					}
@@ -1045,11 +999,9 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 							if crew.Job == "Director" {
 								job = "director"
 							}
-
-							_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "movie", movieID, personID, job)
+							_, _ = DB.Exec("INSERT INTO media_crew (media_id, person_id, job, department) VALUES (?, ?, ?, ?)", mediaID, personID, job, "production")
 						}
 					}
-
 				}
 			}
 		}
@@ -1059,51 +1011,27 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 		if err != nil {
 			log.Println("Error fetching shows from TMDB:", err)
 		} else {
-			// Batch Insert TV Series to resolve N+1 issue
-			if len(shows) > 0 {
-				query := "INSERT INTO tv_series (name, slug, start_date, aggregate_rating, description, image, language_code) VALUES "
-				var args []interface{}
-				for i, s := range shows {
-					slug := tmdb.Slugify(s.Name)
-					if slug == "" {
-						slug = "show"
-					}
-					langCode := s.OriginalLanguage
-					if langCode == "" {
-						langCode = "en"
-					}
-					query += "(?, ?, ?, ?, ?, ?, ?)"
-					if i < len(shows)-1 {
-						query += ", "
-					}
-					args = append(args, s.Name, slug, s.FirstAirDate, s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, langCode)
+			for _, s := range shows {
+				slug := tmdb.Slugify(s.Name)
+				if slug == "" {
+					slug = "show"
 				}
-				query += " RETURNING id"
 
-				rows, err := DB.Query(query, args...)
+				res, err := DB.Exec("INSERT INTO media (media_type, name, slug, date_published, content_rating, aggregate_rating, description, image, language_code, tmdb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+					"TVSeries", s.Name, slug, s.FirstAirDate, "", s.VoteAverage, s.Overview, "https://image.tmdb.org/t/p/w500"+s.PosterPath, s.OriginalLanguage, s.ID)
 				if err != nil {
-					log.Printf("Error batch inserting shows: %v", err)
-				} else {
-					var seriesIDs []int64
-					for rows.Next() {
-						var id int64
-						if err := rows.Scan(&id); err == nil {
-							seriesIDs = append(seriesIDs, id)
-						}
-					}
-					rows.Close()
+					log.Printf("Error inserting media (show) %s: %v", s.Name, err)
+					continue
+				}
+				mediaID, _ := res.LastInsertId()
 
-					// Now loop to insert the dependent relations per show
-					for i, s := range shows {
-						if i >= len(seriesIDs) {
-							log.Printf("Skipping dependent insertions for show %s due to missing ID", s.Name)
-							continue
-						}
-						seriesID := seriesIDs[i]
-						slug := tmdb.Slugify(s.Name)
+				_, err = DB.Exec("INSERT INTO tv_series (media_id, number_of_seasons) VALUES (?, ?)", mediaID, 1) // Default to 1 for initial seed
+				if err != nil {
+					log.Printf("Error inserting tv_series subtype %d: %v", mediaID, err)
+				}
 
 						for _, gID := range s.GenreIDs {
-							_, _ = DB.Exec("INSERT INTO tv_genres (series_id, genre_id) VALUES (?, ?)", seriesID, gID)
+							_, _ = DB.Exec("INSERT INTO media_genres (media_id, genre_id) VALUES (?, ?)", mediaID, gID)
 						}
 
 						// Fetch Credits
@@ -1136,7 +1064,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 									charID, _ = res.LastInsertId()
 								}
 
-								_, _ = DB.Exec("INSERT INTO tv_cast (series_id, person_id, character_id, billing_order) VALUES (?, ?, ?, ?)", seriesID, personID, charID, cast.Order)
+								_, _ = DB.Exec("INSERT INTO media_cast (media_id, person_id, character_name, list_order) VALUES (?, ?, ?, ?)", mediaID, personID, cast.Character, cast.Order)
 							}
 
 							for _, crew := range credits.Crew {
@@ -1161,7 +1089,7 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 										job = "director" // mapping series creators/producers as "directors" for UI simplicity
 									}
 
-									_, _ = DB.Exec("INSERT INTO media_crew (media_type, media_id, person_id, job_title) VALUES (?, ?, ?, ?)", "tv_series", seriesID, personID, job)
+									_, _ = DB.Exec("INSERT INTO media_crew (media_id, person_id, job, department) VALUES (?, ?, ?, ?)", mediaID, personID, job, "production")
 								}
 							}
 						}
@@ -1185,14 +1113,14 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 								}
 
 								placeholders = append(placeholders, "(?, ?, ?, ?, ?, ?, ?, ?, ?)")
-								vals = append(vals, seriesID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+								vals = append(vals, mediaID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
 							}
 
-							query := fmt.Sprintf(`INSERT INTO tv_episodes
+							query_ep := fmt.Sprintf(`INSERT INTO tv_episodes
 								(series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
 								VALUES %s`, strings.Join(placeholders, ","))
 
-							_, err := DB.Exec(query, vals...)
+							_, err := DB.Exec(query_ep, vals...)
 
 							if err != nil {
 								log.Printf("Error inserting batch episodes for series %s: %v", s.Name, err)
@@ -1202,18 +1130,22 @@ func seedDataIfEmpty(tmdbAPIKey string) {
 				}
 			}
 		}
-	}
-}
 
 func GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
-	orderBy := "id ASC"
-	if sort == "rating" {
-		orderBy = "aggregate_rating DESC"
-	} else if sort == "date" {
-		orderBy = "date_published DESC"
+	orderBy := "m.id ASC"
+	switch sort {
+	case "rating":
+		orderBy = "m.aggregate_rating DESC"
+	case "date":
+		orderBy = "m.date_published DESC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '') 
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
+		WHERE m.media_type = 'Movie'
+		ORDER BY %s LIMIT %d OFFSET %d`, orderBy, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1233,14 +1165,20 @@ func GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
 }
 
 func GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) {
-	orderBy := "id ASC"
-	if sort == "rating" {
-		orderBy = "aggregate_rating DESC"
-	} else if sort == "date" {
-		orderBy = "start_date DESC"
+	orderBy := "m.id ASC"
+	switch sort {
+	case "rating":
+		orderBy = "m.aggregate_rating DESC"
+	case "date":
+		orderBy = "m.date_published DESC"
 	}
 
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0) 
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		WHERE m.media_type = 'TVSeries'
+		ORDER BY %s LIMIT %d OFFSET %d`, orderBy, limit, offset)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1260,7 +1198,12 @@ func GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) 
 }
 
 func GetPopularMovies(limit int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY aggregate_rating DESC LIMIT %d", limit)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '') 
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
+		WHERE m.media_type = 'Movie'
+		ORDER BY m.aggregate_rating DESC LIMIT %d`, limit)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1280,7 +1223,12 @@ func GetPopularMovies(limit int) ([]models.Movie, error) {
 }
 
 func GetUpcomingMovies(limit int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies ORDER BY date_published DESC LIMIT %d", limit)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '') 
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
+		WHERE m.media_type = 'Movie'
+		ORDER BY m.date_published DESC LIMIT %d`, limit)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1300,7 +1248,12 @@ func GetUpcomingMovies(limit int) ([]models.Movie, error) {
 }
 
 func GetPopularShows(limit int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY aggregate_rating DESC LIMIT %d", limit)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0) 
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		WHERE m.media_type = 'TVSeries'
+		ORDER BY m.aggregate_rating DESC LIMIT %d`, limit)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1320,7 +1273,12 @@ func GetPopularShows(limit int) ([]models.TVSeries, error) {
 }
 
 func GetNewShows(limit int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series ORDER BY start_date DESC LIMIT %d", limit)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0) 
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		WHERE m.media_type = 'TVSeries'
+		ORDER BY m.date_published DESC LIMIT %d`, limit)
 	rows, err := DB.Query(query)
 	if err != nil {
 		return nil, err
@@ -1339,33 +1297,14 @@ func GetNewShows(limit int) ([]models.TVSeries, error) {
 	return shows, nil
 }
 
-func GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
-	orderBy := "id ASC"
-	if sort == "name" {
-		orderBy = "name ASC"
-	}
-
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people ORDER BY %s LIMIT %d OFFSET %d", orderBy, limit, offset)
-	rows, err := DB.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var people []models.Person
-	for rows.Next() {
-		var p models.Person
-		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.Image)
-		if err != nil {
-			return nil, err
-		}
-		people = append(people, p)
-	}
-	return people, nil
-}
 
 func SearchMovies(searchQuery string, limit int, offset int) ([]models.Movie, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, '') FROM movies WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '') 
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
+		WHERE m.media_type = 'Movie' AND m.name LIKE ? COLLATE NOCASE
+		LIMIT %d OFFSET %d`, limit, offset)
 	rows, err := DB.Query(query, "%"+searchQuery+"%")
 	if err != nil {
 		return nil, err
@@ -1385,7 +1324,12 @@ func SearchMovies(searchQuery string, limit int, offset int) ([]models.Movie, er
 }
 
 func SearchShows(searchQuery string, limit int, offset int) ([]models.TVSeries, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0) FROM tv_series WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
+	query := fmt.Sprintf(`
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0) 
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		WHERE m.media_type = 'TVSeries' AND m.name LIKE ? COLLATE NOCASE
+		LIMIT %d OFFSET %d`, limit, offset)
 	rows, err := DB.Query(query, "%"+searchQuery+"%")
 	if err != nil {
 		return nil, err
@@ -1402,26 +1346,6 @@ func SearchShows(searchQuery string, limit int, offset int) ([]models.TVSeries, 
 		shows = append(shows, s)
 	}
 	return shows, nil
-}
-
-func SearchPeople(searchQuery string, limit int, offset int) ([]models.Person, error) {
-	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(image, '') FROM people WHERE name LIKE ? COLLATE NOCASE LIMIT %d OFFSET %d", limit, offset)
-	rows, err := DB.Query(query, "%"+searchQuery+"%")
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var people []models.Person
-	for rows.Next() {
-		var p models.Person
-		err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.Image)
-		if err != nil {
-			return nil, err
-		}
-		people = append(people, p)
-	}
-	return people, nil
 }
 
 func GetAllUsers(limit int, offset int) ([]models.User, error) {
@@ -1444,16 +1368,54 @@ func GetAllUsers(limit int, offset int) ([]models.User, error) {
 	return users, nil
 }
 
+func GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
+	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(popularity_score, 0.0) FROM people ORDER BY popularity_score DESC LIMIT %d OFFSET %d", limit, offset)
+	rows, err := DB.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var people []models.Person
+	for rows.Next() {
+		var p models.Person
+		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.Description, &p.Image, &p.PopularityScore); err != nil {
+			return nil, err
+		}
+		people = append(people, p)
+	}
+	return people, nil
+}
+
+func SearchPeople(q string, limit int, offset int) ([]models.Person, error) {
+	query := fmt.Sprintf("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(popularity_score, 0.0) FROM people WHERE name LIKE ? ORDER BY popularity_score DESC LIMIT %d OFFSET %d", limit, offset)
+	rows, err := DB.Query(query, "%"+q+"%")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var people []models.Person
+	for rows.Next() {
+		var p models.Person
+		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.Description, &p.Image, &p.PopularityScore); err != nil {
+			return nil, err
+		}
+		people = append(people, p)
+	}
+	return people, nil
+}
+
 // GetMovieByID fetches a single movie by ID
-// GetMovieGenres fetches genres for a specific movie
-func GetMovieGenres(movieID int) ([]models.Genre, error) {
+// GetMediaGenres fetches genres for a specific media ID
+func GetMediaGenres(mediaID int) ([]models.Genre, error) {
 	query := `
 		SELECT g.id, g.name, g.slug
 		FROM genres g
-		JOIN movie_genres mg ON g.id = mg.genre_id
-		WHERE mg.movie_id = ?
+		JOIN media_genres mg ON g.id = mg.genre_id
+		WHERE mg.media_id = ?
 	`
-	rows, err := DB.Query(query, movieID)
+	rows, err := DB.Query(query, mediaID)
 	if err != nil {
 		return nil, err
 	}
@@ -1473,8 +1435,16 @@ func GetMovieGenres(movieID int) ([]models.Genre, error) {
 func GetMovieByID(id int) (models.Movie, error) {
 	var m models.Movie
 	var budget, boxOffice, langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(date_published, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(budget, ''), COALESCE(box_office, ''), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, is_family_friendly, COALESCE(subtitle, '') FROM movies WHERE id = ?", id).
-		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
+	query := `
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.content_rating, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), 
+		       COALESCE(s.budget, ''), COALESCE(s.box_office, ''), COALESCE(s.duration, 0), COALESCE(m.language_code, ''), COALESCE(m.country_code, ''), COALESCE(m.tagline, ''), 
+		       COALESCE(m.rating_count, 0), COALESCE(m.review_count, 0), COALESCE(m.best_rating, 0), COALESCE(m.worst_rating, 0), COALESCE(m.is_family_friendly, 1), COALESCE(m.subtitle, '') 
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
+		WHERE m.id = ? AND m.media_type = 'Movie'
+	`
+	err := DB.QueryRow(query, id).
+		Scan(&m.ID, &m.Name, &m.Slug, &m.DatePublished, &m.ContentRating, &m.AggregateRating, &m.Description, &m.Image, &budget, &boxOffice, &m.Duration, &langCode, &countryCode, &tagline, &m.RatingCount, &m.ReviewCount, &m.BestRating, &m.WorstRating, &m.IsFamilyFriendly, &subtitle)
 	m.Budget = budget.String
 	m.BoxOffice = boxOffice.String
 	m.LanguageCode = langCode.String
@@ -1483,12 +1453,7 @@ func GetMovieByID(id int) (models.Movie, error) {
 	m.Subtitle = subtitle.String
 
 	// Fetch genres
-	genres, _ := GetMovieGenres(m.ID)
-	// Map []models.Genre to []string for Schema.org
-	m.Genres = make([]string, len(genres))
-	for i, g := range genres {
-		m.Genres[i] = g.Name
-	}
+	m.Genres, _ = GetMediaGenres(m.ID)
 
 	return m, err
 }
@@ -1498,13 +1463,12 @@ func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	query := `
 		SELECT 
 			p.id, p.name, p.slug, COALESCE(p.image, ''), 
-			c.id, c.name, c.slug, COALESCE(c.image, ''), 
-			COALESCE(mc.billing_order, 0)
-		FROM movie_cast mc
+			COALESCE(mc.character_name, ''), 
+			COALESCE(mc.list_order, 0)
+		FROM media_cast mc
 		JOIN people p ON mc.person_id = p.id
-		JOIN characters c ON mc.character_id = c.id
-		WHERE mc.movie_id = ?
-		ORDER BY mc.billing_order ASC
+		WHERE mc.media_id = ?
+		ORDER BY mc.list_order ASC
 	`
 	rows, err := DB.Query(query, movieID)
 	if err != nil {
@@ -1515,19 +1479,18 @@ func GetMovieCast(movieID int) ([]models.CastMember, error) {
 	var cast []models.CastMember
 	for rows.Next() {
 		var cm models.CastMember
-		// Handle potential NULL images gracefully if needed using sql.NullString,
-		// but since we define them as TEXT we can scan directly to string for now.
-		var pImg, cImg sql.NullString
+		var pImg sql.NullString
+		// Since our models.CastMember expects a Character struct, we'll populate a name-only character
 		err := rows.Scan(
 			&cm.Person.ID, &cm.Person.Name, &cm.Person.Slug, &pImg,
-			&cm.Character.ID, &cm.Character.Name, &cm.Character.Slug, &cImg,
+			&cm.Character.Name,
 			&cm.BillingOrder,
 		)
 		if err != nil {
 			return nil, err
 		}
 		cm.Person.Image = pImg.String
-		cm.Character.Image = cImg.String
+		cm.Character.Slug = tmdb.Slugify(cm.Character.Name)
 		cast = append(cast, cm)
 	}
 	return cast, nil
@@ -1566,48 +1529,29 @@ func GetMovieDetail(id int) (models.MovieDetail, error) {
 	return detail, nil
 }
 
-// GetTVSeriesByID fetches a single TV show by ID
-// GetTVSeriesGenres fetches genres for a specific TV show
-func GetTVSeriesGenres(seriesID int) ([]models.Genre, error) {
-	query := `
-		SELECT g.id, g.name, g.slug
-		FROM genres g
-		JOIN tv_genres tg ON g.id = tg.genre_id
-		WHERE tg.series_id = ?
-	`
-	rows, err := DB.Query(query, seriesID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
 
-	var genres []models.Genre
-	for rows.Next() {
-		var g models.Genre
-		if err := rows.Scan(&g.ID, &g.Name, &g.Slug); err != nil {
-			return nil, err
-		}
-		genres = append(genres, g)
-	}
-	return genres, nil
-}
 
 func GetTVSeriesByID(id int) (models.TVSeries, error) {
 	var s models.TVSeries
 	var langCode, countryCode, tagline, subtitle sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(start_date, ''), COALESCE(end_date, ''), COALESCE(aggregate_rating, 0.0), COALESCE(description, ''), COALESCE(image, ''), COALESCE(number_of_seasons, 0), COALESCE(language_code, ''), COALESCE(country_code, ''), COALESCE(tagline, ''), rating_count, review_count, best_rating, worst_rating, COALESCE(subtitle, '') FROM tv_series WHERE id = ?", id).
-		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
+	query := `
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.content_rating, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), 
+		       COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0), 
+		       COALESCE(m.language_code, 'en'), COALESCE(m.country_code, 'US'), COALESCE(m.tagline, ''), 
+		       COALESCE(m.rating_count, 0), COALESCE(m.review_count, 0), COALESCE(m.best_rating, 0), COALESCE(m.worst_rating, 0), COALESCE(m.subtitle, '') 
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		WHERE m.id = ? AND m.media_type = 'TVSeries'
+	`
+	err := DB.QueryRow(query, id).
+		Scan(&s.ID, &s.Name, &s.Slug, &s.StartDate, &s.ContentRating, &s.EndDate, &s.AggregateRating, &s.Description, &s.Image, &s.NumberOfSeasons, &langCode, &countryCode, &tagline, &s.RatingCount, &s.ReviewCount, &s.BestRating, &s.WorstRating, &subtitle)
 	s.LanguageCode = langCode.String
 	s.CountryCode = countryCode.String
 	s.Tagline = tagline.String
 	s.Subtitle = subtitle.String
 
-	genres, _ := GetTVSeriesGenres(s.ID)
-	// Map []models.Genre to []string for Schema.org
-	s.Genres = make([]string, len(genres))
-	for i, g := range genres {
-		s.Genres[i] = g.Name
-	}
+	// Fetch genres
+	s.Genres, _ = GetMediaGenres(s.ID)
 
 	return s, err
 }
@@ -1616,14 +1560,13 @@ func GetTVSeriesByID(id int) (models.TVSeries, error) {
 func GetTVSeriesCast(seriesID int) ([]models.CastMember, error) {
 	query := `
 		SELECT 
-			p.id, p.name, p.slug, p.image, 
-			c.id, c.name, c.slug, c.image, 
-			tc.billing_order
-		FROM tv_cast tc
-		JOIN people p ON tc.person_id = p.id
-		JOIN characters c ON tc.character_id = c.id
-		WHERE tc.series_id = ?
-		ORDER BY tc.billing_order ASC
+			p.id, p.name, p.slug, COALESCE(p.image, ''), 
+			COALESCE(mc.character_name, ''), 
+			COALESCE(mc.list_order, 0)
+		FROM media_cast mc
+		JOIN people p ON mc.person_id = p.id
+		WHERE mc.media_id = ?
+		ORDER BY mc.list_order ASC
 	`
 	rows, err := DB.Query(query, seriesID)
 	if err != nil {
@@ -1634,17 +1577,17 @@ func GetTVSeriesCast(seriesID int) ([]models.CastMember, error) {
 	var cast []models.CastMember
 	for rows.Next() {
 		var cm models.CastMember
-		var pImg, cImg sql.NullString
+		var pImg sql.NullString
 		err := rows.Scan(
 			&cm.Person.ID, &cm.Person.Name, &cm.Person.Slug, &pImg,
-			&cm.Character.ID, &cm.Character.Name, &cm.Character.Slug, &cImg,
+			&cm.Character.Name,
 			&cm.BillingOrder,
 		)
 		if err != nil {
 			return nil, err
 		}
 		cm.Person.Image = pImg.String
-		cm.Character.Image = cImg.String
+		cm.Character.Slug = tmdb.Slugify(cm.Character.Name)
 		cast = append(cast, cm)
 	}
 	return cast, nil
@@ -1714,12 +1657,12 @@ func GetTVSeriesDetail(id int) (models.TVSeriesDetail, error) {
 // GetMediaCrew fetches the directors and writers for a given media (movie or tv_series)
 func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, writers []models.Person, err error) {
 	query := `
-		SELECT p.id, p.name, p.slug, COALESCE(p.gender, 0), pos.job_title
+		SELECT p.id, p.name, p.slug, COALESCE(p.gender, 0), pos.job
 		FROM media_crew pos
 		JOIN people p ON pos.person_id = p.id
-		WHERE pos.media_type = ? AND pos.media_id = ?
+		WHERE pos.media_id = ?
 	`
-	rows, err := DB.Query(query, mediaType, mediaID)
+	rows, err := DB.Query(query, mediaID)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1728,16 +1671,17 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 	for rows.Next() {
 		var p models.Person
 		var job string
-		var gender sql.NullString // Catch generic DB null fields
+		var gender string
 
 		if err := rows.Scan(&p.ID, &p.Name, &p.Slug, &gender, &job); err != nil {
-			continue // Skip errors and grab what we can
+			continue 
 		}
-		p.Gender = gender.String
+		p.Gender = gender
 
-		if job == "director" {
+		switch job {
+		case "director":
 			directors = append(directors, p)
-		} else if job == "writer" {
+		case "writer":
 			writers = append(writers, p)
 		}
 	}
@@ -1749,8 +1693,8 @@ func GetMediaCrew(mediaType string, mediaID int) (directors []models.Person, wri
 func GetPersonByID(id int) (models.Person, error) {
 	var p models.Person
 	var knowsLang, natCode, dept sql.NullString
-	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), popularity_score FROM people WHERE id = ?", id).
-		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
+	err := DB.QueryRow("SELECT id, name, slug, COALESCE(gender, ''), COALESCE(birth_date, ''), COALESCE(birth_place, ''), COALESCE(description, ''), COALESCE(image, ''), COALESCE(knows_language, ''), COALESCE(nationality_code, ''), COALESCE(known_for_department, ''), COALESCE(popularity_score, 0.0) FROM people WHERE id = ?", id).
+		Scan(&p.ID, &p.Name, &p.Slug, &p.Gender, &p.BirthDate, &p.BirthPlace, &p.Description, &p.Image, &knowsLang, &natCode, &dept, &p.PopularityScore)
 	p.KnowsLanguage = knowsLang.String
 	p.NationalityCode = natCode.String
 	p.KnownForDepartment = dept.String
@@ -1765,24 +1709,22 @@ func GetPersonDetailByID(id int) (models.PersonDetail, error) {
 		return detail, err
 	}
 	detail.Person = person
-	movies, _ := GetPersonMovies(person.ID)
-	shows, _ := GetPersonShows(person.ID)
+	movies, _ := GetPersonMovies(int64(person.ID))
+	shows, _ := GetPersonShows(int64(person.ID))
 	detail.Movies = movies
 	detail.Shows = shows
 	return detail, nil
 }
 
-// GetPersonMovies fetches movies a person was cast in or crewed on
-func GetPersonMovies(personID int) ([]models.Movie, error) {
+func GetPersonMovies(personID int64) ([]models.Movie, error) {
 	query := `
 		SELECT DISTINCT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '')
-		FROM movies m
-		LEFT JOIN movie_cast mc ON mc.movie_id = m.id AND mc.person_id = ?
-		LEFT JOIN media_crew cr ON cr.media_id = m.id AND cr.media_type = 'movie' AND cr.person_id = ?
-		WHERE mc.person_id IS NOT NULL OR cr.person_id IS NOT NULL
+		FROM media m
+		JOIN media_cast mc ON m.id = mc.media_id
+		WHERE mc.person_id = ? AND m.media_type = 'Movie'
 		ORDER BY m.date_published DESC
 	`
-	rows, err := DB.Query(query, personID, personID)
+	rows, err := DB.Query(query, personID)
 	if err != nil {
 		return nil, err
 	}
@@ -1798,17 +1740,16 @@ func GetPersonMovies(personID int) ([]models.Movie, error) {
 	return movies, nil
 }
 
-// GetPersonShows fetches shows a person was cast in or crewed on
-func GetPersonShows(personID int) ([]models.TVSeries, error) {
+func GetPersonShows(personID int64) ([]models.TVSeries, error) {
 	query := `
-		SELECT DISTINCT s.id, s.name, s.slug, COALESCE(s.start_date, ''), COALESCE(s.end_date, ''), COALESCE(s.aggregate_rating, 0.0), COALESCE(s.description, ''), COALESCE(s.image, ''), COALESCE(s.number_of_seasons, 0)
-		FROM tv_series s
-		LEFT JOIN tv_cast tc ON tc.series_id = s.id AND tc.person_id = ?
-		LEFT JOIN media_crew cr ON cr.media_id = s.id AND cr.media_type = 'tv_series' AND cr.person_id = ?
-		WHERE tc.person_id IS NOT NULL OR cr.person_id IS NOT NULL
-		ORDER BY s.start_date DESC
+		SELECT DISTINCT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0)
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		JOIN media_cast mc ON m.id = mc.media_id
+		WHERE mc.person_id = ? AND m.media_type = 'TVSeries'
+		ORDER BY m.date_published DESC
 	`
-	rows, err := DB.Query(query, personID, personID)
+	rows, err := DB.Query(query, personID)
 	if err != nil {
 		return nil, err
 	}
@@ -1834,9 +1775,10 @@ func GetUserWatchlist(userID int) ([]models.Movie, []models.TVSeries, error) {
 
 	movieQuery := `
 		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, '')
-		FROM movies m
+		FROM media m
+		JOIN movies s ON m.id = s.media_id
 		JOIN watchlist_items wi ON m.id = wi.media_id
-		WHERE wi.watchlist_id = ? AND wi.media_type = 'movie'
+		WHERE wi.watchlist_id = ? AND m.media_type = 'Movie'
 		ORDER BY wi.added_at DESC
 	`
 	movieRows, err := DB.Query(movieQuery, watchlistID)
@@ -1855,10 +1797,11 @@ func GetUserWatchlist(userID int) ([]models.Movie, []models.TVSeries, error) {
 	}
 
 	showQuery := `
-		SELECT s.id, s.name, s.slug, COALESCE(s.start_date, ''), COALESCE(s.end_date, ''), COALESCE(s.aggregate_rating, 0.0), COALESCE(s.description, ''), COALESCE(s.image, ''), COALESCE(s.number_of_seasons, 0)
-		FROM tv_series s
-		JOIN watchlist_items wi ON s.id = wi.media_id
-		WHERE wi.watchlist_id = ? AND wi.media_type = 'tv'
+		SELECT m.id, m.name, m.slug, COALESCE(m.date_published, ''), COALESCE(s.end_date, ''), COALESCE(m.aggregate_rating, 0.0), COALESCE(m.description, ''), COALESCE(m.image, ''), COALESCE(s.number_of_seasons, 0)
+		FROM media m
+		JOIN tv_series s ON m.id = s.media_id
+		JOIN watchlist_items wi ON m.id = wi.media_id
+		WHERE wi.watchlist_id = ? AND m.media_type = 'TVSeries'
 		ORDER BY wi.added_at DESC
 	`
 	showRows, err := DB.Query(showQuery, watchlistID)

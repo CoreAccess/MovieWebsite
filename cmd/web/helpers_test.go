@@ -49,7 +49,7 @@ func TestGetSafeReferer(t *testing.T) {
 		{"Empty referer", "", fallback},
 		{"Safe local referer", "http://localhost:8080/movies", "/movies"},
 		{"Safe local referer with query", "http://localhost:8080/search?q=test", "/search?q=test"},
-		{"Path only referer", "/wiki/edit?id=1", "/wiki/edit?id=1"},
+		{"Path only referer", "/search?q=foo", "/search?q=foo"},
 
 		// Unsafe or malicious referers
 		{"External referer", "http://evil.com", fallback}, // url.Parse gives empty Path for http://evil.com, which fails isSafeRedirect

@@ -16,6 +16,7 @@ type DatabaseRepo interface {
 	CreateUser(username, email, hash string) error
 	GetUserByEmail(email string) (models.User, error)
 	GetUserByID(id int) (models.User, error)
+	GetAllUsers(limit int, offset int) ([]models.User, error)
 	UpdateUserProfile(userID int, email string, avatar string) error
 
 	// Core Media Operations (Supertype queries)
@@ -32,6 +33,7 @@ type DatabaseRepo interface {
 	GetPopularShows(limit int) ([]models.TVSeries, error)
 	GetNewShows(limit int) ([]models.TVSeries, error)
 	GetShowByID(id int) (*models.TVSeries, error)
+	GetTVEpisodes(seriesID int) ([]models.TVEpisode, error)
 
 	GetAllPeople(limit int, offset int, sort string) ([]models.Person, error)
 	GetPersonByID(id int) (*models.Person, error)
@@ -52,4 +54,17 @@ type DatabaseRepo interface {
 	InsertShow(s models.TVSeries) (int, error)
 	InsertPerson(p models.Person) (int, error)
 	InsertMediaCast(mediaID int, personID int, character string, order int) error
+
+	// Watchlist Operations
+	GetUserWatchlist(userID int) ([]models.Movie, []models.TVSeries, error)
+	GetUserWatchlists(userID int) ([]models.Watchlist, error)
+	CreateWatchlist(userID int, name, description string) error
+	AddToWatchlist(watchlistID int, mediaType string, mediaID int) error
+
+	// Session Operations
+	CreateSession(s models.Session) error
+	GetSession(id string) (models.Session, error)
+	DeleteSession(id string) error
+
+	GetAdminMetrics() (userCount, mediaCount int, err error)
 }

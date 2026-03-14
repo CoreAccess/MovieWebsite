@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"time"
 
-	"movieweb/internal/database"
 	"movieweb/internal/models"
 
 	"github.com/google/uuid"
@@ -43,7 +42,7 @@ func (app *application) signupPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Insert the new user record into the database with the hashed password
-	err = database.CreateUser(username, email, string(hash))
+	err = app.Service.CreateUser(username, email, string(hash))
 	if err != nil {
 		// If creation fails (e.g., username or email already exists due to UNIQUE constraints),
 		// redirect back to the signup page with an error flag.
@@ -75,7 +74,7 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 	password := r.PostForm.Get("password")
 
 	// Attempt to find a matching user by their email address
-	user, err := database.GetUserByEmail(email)
+	user, err := app.Service.GetUserByEmail(email)
 	if err != nil {
 		// User not found
 		http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
@@ -101,7 +100,7 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Store the session in the database so the server can track active logins
-	err = database.CreateSession(session)
+	err = app.Service.CreateSession(session)
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "Server Error", 500)
@@ -134,7 +133,7 @@ func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
 func (app *application) logoutPost(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie("session")
 	if err == nil {
-		database.DeleteSession(cookie.Value)
+		app.Service.DeleteSession(cookie.Value)
 	}
 
 	http.SetCookie(w, &http.Cookie{
@@ -157,12 +156,12 @@ func (app *application) sessionMiddleware(next http.Handler) http.Handler {
 		cookie, err := r.Cookie("session")
 		if err == nil && cookie.Value != "" {
 			// Look up the session ID in the database
-			session, err := database.GetSession(cookie.Value)
+			session, err := app.Service.GetSession(cookie.Value)
 
 			// Verify the session exists and hasn't expired
 			if err == nil && time.Now().Before(session.ExpiresAt) {
 				// Retrieve the associated user from the database
-				user, err := database.GetUserByID(session.UserID)
+				user, err := app.Service.GetUserByID(session.UserID)
 				if err == nil {
 					// Attach the user object to the request context.
 					// This allows subsequent handlers (like 'profileView') to access the logged-in user's data
@@ -172,7 +171,7 @@ func (app *application) sessionMiddleware(next http.Handler) http.Handler {
 				}
 			} else {
 				// If the session is invalid or expired, delete it from the database to clean up
-				database.DeleteSession(cookie.Value)
+				app.Service.DeleteSession(cookie.Value)
 			}
 		}
 		// Pass control to the next handler in the chain (with the potentially updated context)

@@ -36,13 +36,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("POST /profile/edit", app.requireAuth(app.profileEditPost))
 	mux.HandleFunc("GET /my-feed", app.requireAuth(app.myFeedView))
 	mux.HandleFunc("POST /watchlist/toggle", app.requireAuth(app.toggleWatchlistPost))
-	mux.HandleFunc("GET /wiki/edit", app.requireAuth(app.wikiEditView))
-	mux.HandleFunc("POST /wiki/edit", app.requireAuth(app.wikiEditPost))
 	mux.HandleFunc("GET /admin", app.adminRoleCheck(app.adminDashboardView))
-	mux.HandleFunc("POST /admin/wiki/approve", app.adminRoleCheck(app.wikiApprovePost))
-	mux.HandleFunc("POST /admin/wiki/reject", app.adminRoleCheck(app.wikiRejectPost))
-	mux.HandleFunc("GET /ads", app.requireAuth(app.adsPortalView))
-	mux.HandleFunc("POST /ads/create", app.requireAuth(app.createAdCampaignPost))
 
 	csrfHandler := nosurf.New(app.sessionMiddleware(mux))
 	csrfHandler.SetBaseCookie(http.Cookie{

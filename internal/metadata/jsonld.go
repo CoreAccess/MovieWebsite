@@ -19,9 +19,9 @@ func GenerateMovieJSONLD(m models.Movie, baseDomain string) (string, error) {
 		"datePublished": m.DatePublished,
 	}
 
-	if m.Runtime > 0 {
+	if m.Duration > 0 {
 		// ISO 8601 Duration format for Runtime in minutes
-		payload["duration"] = fmt.Sprintf("PT%dM", m.Runtime)
+		payload["duration"] = fmt.Sprintf("PT%dM", m.Duration)
 	}
 	if m.AggregateRating > 0 {
 		payload["aggregateRating"] = map[string]interface{}{
@@ -89,7 +89,7 @@ func GeneratePersonJSONLD(p models.Person, baseDomain string) (string, error) {
 		"description": p.Biography,
 		"birthDate":   p.Birthday,
 		"deathDate":   p.Deathday,
-		"birthPlace":  p.PlaceOfBirth,
+		"birthPlace":  p.BirthPlace,
 	}
 
 	bytes, err := json.Marshal(payload)
