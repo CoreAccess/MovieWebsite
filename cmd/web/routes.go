@@ -42,7 +42,7 @@ func (app *application) routes() http.Handler {
 	csrfHandler.SetBaseCookie(http.Cookie{
 		HttpOnly: true,
 		Path:     "/",
-		Secure:   false,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
 	})
 
