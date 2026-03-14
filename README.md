@@ -1,19 +1,17 @@
-# MovieWeb
+# MovieWeb (Temporary Name)
 
-MovieWeb is a Go-based web application for managing and exploring a media database of movies, TV shows, and people. It features user accounts, watchlists, social feeds, and admin moderation.
+MovieWeb (Temporary Name) is a Go-based web application for managing and exploring a media database of movies, TV shows, and people. It features user accounts, watchlists, social feeds, and admin moderation.
 
 ## Features
 
 - **Media Database:** Browse, search, and view detailed profiles for movies, TV shows, and cast/crew members.
-- **User Accounts:** Sign up, log in, manage profiles, and maintain a personalized watchlist.
+- **User Accounts:** Sign up, log in, manage profiles, and maintain personalized watchlists.
 - **Social & Engagement:** View a personalized feed, post updates, and engage with community polls and comments.
-
-- **Security:** Built-in CSRF protection using `nosurf`.
 
 ## Tech Stack
 
 - **Backend:** Go (1.26.1)
-- **Database:** SQLite (`modernc.org/sqlite`)
+- **Database:** PostgreSQL (Supertype Pattern)
 - **Frontend:** HTML Templates, CSS, JavaScript (served from `ui/`)
 - **Security:** `github.com/justinas/nosurf` for CSRF protection
 
@@ -25,14 +23,13 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
 
 - `internal/tmdb/`: Client for interacting with the TMDB API.
 - `ui/`: Contains HTML templates (`ui/html/`) and static assets (`ui/static/`).
-- `DATABASE_RESTRUCTURING_PLAN.md`: Documentation for planned future schema updates.
 
 ## Getting Started
 
 ### Prerequisites
 
 - [Go](https://golang.org/dl/) 1.26 or later.
-- A valid TMDB API key (configured via the `TMDB_API_KEY` environment variable).
+- A valid TMDB API key (configured via the `TMDB_API_KEY` and `TMDB_ACCESS_TOKEN` environment variables).
 
 ### Running the Application
 

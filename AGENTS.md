@@ -33,3 +33,17 @@ Strict adherence to this sequence is mandatory for every feature:
 * Do not bypass the Service Layer to call the Repository directly from a Handler.
 * Do not introduce SQLite-specific syntax that breaks PostgreSQL compatibility.
 * Do not modify database schemas to accommodate UI limitations.
+
+## 7. Logging Requirements
+* Always use Go's built-in `slog` package for logging.
+* Never log sensitive information such as passwords, emails, or API keys.
+* Use JSON format for logging and machine processing.
+* Use structured logging to include context like request IDs and user sessions.
+* Implement log rotation and retention policies.
+* Add context for better request tracking and debugging.
+
+## 8. Log Levels
+* Use `slog.Debug` for debugging messages.
+* Use `slog.Info` for informational messages such as application flow.
+* Use `slog.Warn` for errors that are unexpected but non-critical.
+* Use `slog.Error` for errors and exceptions that are considered critical.
