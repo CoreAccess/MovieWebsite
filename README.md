@@ -64,4 +64,4 @@ MovieWeb is a Go-based web application for managing and exploring a media databa
 
 ## Future Roadmap
 
-A comprehensive restructuring of the database is planned to normalize schemas and adopt schema.org structured data. See the `DATABASE_RESTRUCTURING_PLAN.md` file for full details.
+Coming Soon...
