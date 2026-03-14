@@ -7,6 +7,9 @@ import (
 
 	"movieweb/internal/config"
 	"movieweb/internal/database"
+
+	"movieweb/internal/repository/dbrepo"
+	"movieweb/internal/service"
 )
 
 func main() {
@@ -29,9 +32,17 @@ func main() {
 		infoLog.Println("Note: Using hardcoded TMDB API key. If you see 401 Unauthorized errors, please set the TMDB_ACCESS_TOKEN or TMDB_API_KEY environment variable.")
 	}
 	
+		// LEGACY INIT: Keep the old global DB connection alive for un-migrated handlers
 	if _, err := database.InitDB("./streamline.db", tmdbKey); err != nil {
 		errorLog.Fatalf("Failed to initialize database: %v\n", err)
 	}
+
+	// Create the SQLite repository mapping (Phase 3 N-Tier Layering)
+	sqliteRepo := &dbrepo.SqliteDBRepo{DB: database.DB} // Use the same connection for now
+
+	// Create the Service layer to encapsulate business logic and Vector integration readiness
+	appService := service.NewAppService(sqliteRepo)
+
 
 	templateCache, err := newTemplateCache()
 	if err != nil {
@@ -42,6 +53,7 @@ func main() {
 		errorLog:      errorLog,
 		infoLog:       infoLog,
 		templateCache: templateCache,
+		Service:       appService,
 	}
 
 	port := os.Getenv("PORT")
