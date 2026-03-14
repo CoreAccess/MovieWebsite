@@ -1,22 +1,33 @@
 package service
 
 import (
+	"fmt"
+	"movieweb/internal/metadata"
 	"movieweb/internal/models"
 	"movieweb/internal/repository"
-	"movieweb/internal/metadata"
+	"sync"
+	"time"
 )
+
+type cacheItem struct {
+	value      any
+	expiration time.Time
+}
 
 // AppService orchestrates complex business logic, abstracting
 // repository calls (and later Vector DB calls) away from HTTP handlers.
 type AppService struct {
 	Repo repository.DatabaseRepo
 	// Future: VectorRepo repository.VectorRepo
+	cache map[string]cacheItem
+	mu    sync.RWMutex
 }
 
 // NewAppService creates a new configured service layer.
 func NewAppService(repo repository.DatabaseRepo) *AppService {
 	return &AppService{
-		Repo: repo,
+		Repo:  repo,
+		cache: make(map[string]cacheItem),
 	}
 }
 
@@ -119,12 +130,56 @@ func (s *AppService) GetNewShows(limit int) ([]models.TVSeries, error) {
 	return s.Repo.GetNewShows(limit)
 }
 
+func (s *AppService) getFromCache(key string) (any, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	item, ok := s.cache[key]
+	if !ok {
+		return nil, false
+	}
+
+	if time.Now().After(item.expiration) {
+		return nil, false
+	}
+
+	return item.value, true
+}
+
+func (s *AppService) setToCache(key string, value any, ttl time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.cache[key] = cacheItem{
+		value:      value,
+		expiration: time.Now().Add(ttl),
+	}
+}
+
 func (s *AppService) GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
-	return s.Repo.GetAllMovies(limit, offset, sort)
+	cacheKey := fmt.Sprintf("movies:%d:%d:%s", limit, offset, sort)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.Movie), nil
+	}
+
+	movies, err := s.Repo.GetAllMovies(limit, offset, sort)
+	if err == nil {
+		s.setToCache(cacheKey, movies, 5*time.Minute)
+	}
+	return movies, err
 }
 
 func (s *AppService) GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) {
-	return s.Repo.GetAllShows(limit, offset, sort)
+	cacheKey := fmt.Sprintf("shows:%d:%d:%s", limit, offset, sort)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.TVSeries), nil
+	}
+
+	shows, err := s.Repo.GetAllShows(limit, offset, sort)
+	if err == nil {
+		s.setToCache(cacheKey, shows, 5*time.Minute)
+	}
+	return shows, err
 }
 
 func (s *AppService) GetAllPeople(limit int, offset int, sort string) ([]models.Person, error) {
@@ -161,7 +216,16 @@ func (s *AppService) GetUserByID(id int) (models.User, error) {
 }
 
 func (s *AppService) GetAllUsers(limit int, offset int) ([]models.User, error) {
-	return s.Repo.GetAllUsers(limit, offset)
+	cacheKey := fmt.Sprintf("users:%d:%d", limit, offset)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.User), nil
+	}
+
+	users, err := s.Repo.GetAllUsers(limit, offset)
+	if err == nil {
+		s.setToCache(cacheKey, users, 5*time.Minute)
+	}
+	return users, err
 }
 
 func (s *AppService) UpdateUserProfile(userID int, email string, avatar string) error {
