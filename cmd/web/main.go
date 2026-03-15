@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"movieweb/internal/config"
 	"movieweb/internal/repository/dbrepo"
@@ -72,6 +73,15 @@ func main() {
 
 	infoLog.Printf("Starting web server on port :%s\n", port)
 
-	err = http.ListenAndServe(":"+port, app.routes())
+	srv := &http.Server{
+		Addr:         ":" + port,
+		ErrorLog:     errorLog,
+		Handler:      app.routes(),
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	err = srv.ListenAndServe()
 	errorLog.Fatal(err)
 }
