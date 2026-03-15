@@ -17,7 +17,7 @@
 # Go workspace file
 go.work
 
-# SQLite databases
+# Database Stuff
 *.db
 *.db-journal
 *.db-shm
@@ -28,6 +28,9 @@ tmp/
 
 # VS Code
 .vscode/
+
+# Jules
+.jules/
 
 # Env files
 .env
