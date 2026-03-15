@@ -47,3 +47,9 @@ Strict adherence to this sequence is mandatory for every feature:
 * Use `slog.Info` for informational messages such as application flow.
 * Use `slog.Warn` for errors that are unexpected but non-critical.
 * Use `slog.Error` for errors and exceptions that are considered critical.
+
+## 9. Front-End Design Patterns
+* Use HTML templates for rendering UI.
+* Use Bootstrap classes as much as possible.
+* Use the `ui/static` directory for static assets such as css, images and js.
+* Avoid using inline styles on html elements such as div, span, etc.
