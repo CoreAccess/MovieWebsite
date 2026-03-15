@@ -1,0 +1,3 @@
+## 2024-05-14 - Cache Home Page Media Queries
+**Learning:** Found a performance bottleneck where paginated lists (`GetAllMovies`, `GetAllShows`) were utilizing the fast in-memory cache, but the high-traffic homepage lists (`GetPopularMovies`, `GetUpcomingMovies`, `GetPopularShows`, `GetNewShows`) were performing expensive database queries on every single request.
+**Action:** When implementing caching in a service layer, ensure that all entry points that retrieve identical or heavily-read public data (like top 10 lists on a homepage) utilize the same caching mechanism, not just the full paginated endpoints.

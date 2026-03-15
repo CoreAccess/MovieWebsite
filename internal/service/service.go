@@ -115,19 +115,55 @@ func (s *AppService) GetPersonDetail(id int, baseDomain string) (*models.Person,
 
 // Listing Operations
 func (s *AppService) GetPopularMovies(limit int) ([]models.Movie, error) {
-	return s.Repo.GetPopularMovies(limit)
+	cacheKey := fmt.Sprintf("popular_movies:%d", limit)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.Movie), nil
+	}
+
+	movies, err := s.Repo.GetPopularMovies(limit)
+	if err == nil {
+		s.setToCache(cacheKey, movies, 5*time.Minute)
+	}
+	return movies, err
 }
 
 func (s *AppService) GetUpcomingMovies(limit int) ([]models.Movie, error) {
-	return s.Repo.GetUpcomingMovies(limit)
+	cacheKey := fmt.Sprintf("upcoming_movies:%d", limit)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.Movie), nil
+	}
+
+	movies, err := s.Repo.GetUpcomingMovies(limit)
+	if err == nil {
+		s.setToCache(cacheKey, movies, 5*time.Minute)
+	}
+	return movies, err
 }
 
 func (s *AppService) GetPopularShows(limit int) ([]models.TVSeries, error) {
-	return s.Repo.GetPopularShows(limit)
+	cacheKey := fmt.Sprintf("popular_shows:%d", limit)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.TVSeries), nil
+	}
+
+	shows, err := s.Repo.GetPopularShows(limit)
+	if err == nil {
+		s.setToCache(cacheKey, shows, 5*time.Minute)
+	}
+	return shows, err
 }
 
 func (s *AppService) GetNewShows(limit int) ([]models.TVSeries, error) {
-	return s.Repo.GetNewShows(limit)
+	cacheKey := fmt.Sprintf("new_shows:%d", limit)
+	if val, ok := s.getFromCache(cacheKey); ok {
+		return val.([]models.TVSeries), nil
+	}
+
+	shows, err := s.Repo.GetNewShows(limit)
+	if err == nil {
+		s.setToCache(cacheKey, shows, 5*time.Minute)
+	}
+	return shows, err
 }
 
 func (s *AppService) getFromCache(key string) (any, bool) {
