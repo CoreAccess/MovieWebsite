@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -58,9 +59,13 @@ func main() {
 		errorLog.Fatal(err)
 	}
 
+	// Initialize slog logger as per AGENTS.md requirements
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
 	app := &application{
 		errorLog:      errorLog,
 		infoLog:       infoLog,
+		logger:        logger,
 		templateCache: templateCache,
 		Service:       appService,
 	}
