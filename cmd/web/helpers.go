@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"log/slog"
 
 	"movieweb/internal/service"
 	"log"
@@ -24,6 +25,7 @@ type application struct {
 
 	errorLog      *log.Logger
 	infoLog       *log.Logger
+	logger        *slog.Logger
 	templateCache map[string]*template.Template
 }
 

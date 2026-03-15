@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -16,6 +17,7 @@ func TestAdminRoleCheck(t *testing.T) {
 	app := &application{
 		errorLog: log.New(io.Discard, "", 0),
 		infoLog:  log.New(io.Discard, "", 0),
+		logger:   slog.New(slog.NewJSONHandler(io.Discard, nil)),
 	}
 
 	// Create a dummy next handler

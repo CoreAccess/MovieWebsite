@@ -29,7 +29,7 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		// Security Fix: Explicitly check the user's role.
+		// Explicitly check the user's role.
 		// We only allow users with the 'admin' role to proceed to administrative functions.
 		// This prevents regular users or moderators from accessing the admin dashboard
 		// and performing sensitive administrative actions.
@@ -37,9 +37,13 @@ func (app *application) adminRoleCheck(next http.HandlerFunc) http.HandlerFunc {
 		// Why this is important: Even if a user is authenticated, they should only have access
 		// to resources that their role permits (Principle of Least Privilege).
 		if user.Role != "admin" {
-			// Security Audit: Log unauthorized access attempts to the admin area.
+			// Security Audit: Log unauthorized access attempts to the admin area using structured logging.
 			// This helps administrators monitor for potential malicious behavior.
-			app.errorLog.Printf("SECURITY: Unauthorized admin access attempt by User ID %d (%s) on %s", user.ID, user.Username, r.URL.Path)
+			app.logger.Warn("SECURITY: Unauthorized admin access attempt",
+				"userID", user.ID,
+				"username", user.Username,
+				"path", r.URL.Path,
+			)
 
 			// If the user is authenticated but doesn't have the required role,
 			// we return a 403 Forbidden status code.
@@ -60,7 +64,7 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 	// Fast counting logic for MVP metrics from service layer
 	userCount, mediaCount, err := app.Service.GetAdminMetrics()
 	if err != nil {
-		app.errorLog.Println("Error fetching admin metrics:", err)
+		app.logger.Error("Error fetching admin metrics", "error", err)
 	}
 
 	data.UserCount = userCount
