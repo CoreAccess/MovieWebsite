@@ -2,7 +2,6 @@ package dbrepo
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 	"movieweb/internal/models"
 
