@@ -264,7 +264,9 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 				// Fetch Episodes for Season 1
 				episodes, err := client.FetchTVSeasonEpisodes(s.ID, 1)
 				if err == nil && len(episodes) > 0 {
-					for _, ep := range episodes {
+					epArgs := make([]interface{}, 0, len(episodes)*9)
+					epPlaceholders := make([]string, 0, len(episodes))
+					for i, ep := range episodes {
 						epSlug := tmdb.Slugify(ep.Name)
 						if epSlug == "" {
 							epSlug = fmt.Sprintf("episode-%d", ep.EpisodeNumber)
@@ -276,13 +278,17 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
 						}
 
-						queryEp := `INSERT INTO tv_episodes (series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
-							VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) ON CONFLICT (series_id, season_number, episode_number) DO NOTHING`
-						_, err := m.DB.Exec(queryEp, mediaID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+						offset := i * 9
+						epPlaceholders = append(epPlaceholders, fmt.Sprintf("($%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+							offset+1, offset+2, offset+3, offset+4, offset+5, offset+6, offset+7, offset+8, offset+9))
+						epArgs = append(epArgs, mediaID, ep.SeasonNumber, ep.EpisodeNumber, ep.Name, epSlug, ep.AirDate, ep.Overview, image, ep.Runtime)
+					}
 
-						if err != nil {
-							log.Printf("Error inserting episode for series %s: %v", s.Name, err)
-						}
+					queryEp := fmt.Sprintf(`INSERT INTO tv_episodes (series_id, season_number, episode_number, name, slug, date_published, description, image, duration)
+							VALUES %s ON CONFLICT (series_id, season_number, episode_number) DO NOTHING`, strings.Join(epPlaceholders, ", "))
+					_, err := m.DB.Exec(queryEp, epArgs...)
+					if err != nil {
+						log.Printf("Error inserting episodes in bulk for series %s: %v", s.Name, err)
 					}
 				}
 			}
