@@ -27,9 +27,9 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("GET /watchlist", app.requireAuth(app.watchlistView))
 
 	mux.HandleFunc("GET /signup", app.signupView)
-	mux.HandleFunc("POST /signup", app.signupPost)
+	mux.HandleFunc("POST /signup", authRateLimit(app.signupPost))
 	mux.HandleFunc("GET /login", app.loginView)
-	mux.HandleFunc("POST /login", app.loginPost)
+	mux.HandleFunc("POST /login", authRateLimit(app.loginPost))
 	mux.HandleFunc("POST /logout", app.logoutPost)
 
 	mux.HandleFunc("GET /profile", app.requireAuth(app.profileView))
