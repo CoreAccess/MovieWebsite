@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+const (
+	APIBaseURL   = "https://api.themoviedb.org/3"
+	ImageBaseURL = "https://image.tmdb.org/t/p/w500"
+)
+
 type Client struct {
 	token  string
 	isV4   bool
@@ -122,7 +127,7 @@ type TMDBGenre struct {
 }
 
 func (c *Client) FetchMovieGenres() ([]TMDBGenre, error) {
-	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/movie/list?language=en", nil)
+	req, _ := http.NewRequest("GET", APIBaseURL+"/genre/movie/list?language=en", nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -144,7 +149,7 @@ func (c *Client) FetchMovieGenres() ([]TMDBGenre, error) {
 }
 
 func (c *Client) FetchTVGenres() ([]TMDBGenre, error) {
-	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/genre/tv/list?language=en", nil)
+	req, _ := http.NewRequest("GET", APIBaseURL+"/genre/tv/list?language=en", nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -166,7 +171,7 @@ func (c *Client) FetchTVGenres() ([]TMDBGenre, error) {
 }
 
 func (c *Client) FetchTrendingMovies() ([]TMDBMovie, error) {
-	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/trending/movie/week?language=en-US", nil)
+	req, _ := http.NewRequest("GET", APIBaseURL+"/trending/movie/week?language=en-US", nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -193,7 +198,7 @@ func (c *Client) FetchTrendingMovies() ([]TMDBMovie, error) {
 }
 
 func (c *Client) FetchTrendingShows() ([]TMDBTV, error) {
-	req, _ := http.NewRequest("GET", "https://api.themoviedb.org/3/trending/tv/week?language=en-US", nil)
+	req, _ := http.NewRequest("GET", APIBaseURL+"/trending/tv/week?language=en-US", nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -220,7 +225,7 @@ func (c *Client) FetchTrendingShows() ([]TMDBTV, error) {
 }
 
 func (c *Client) FetchMovieCredits(movieID int) (CreditsResponse, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/movie/%d/credits?language=en-US", movieID), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf(APIBaseURL+"/movie/%d/credits?language=en-US", movieID), nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -247,7 +252,7 @@ func (c *Client) FetchMovieCredits(movieID int) (CreditsResponse, error) {
 }
 
 func (c *Client) FetchTVCredits(seriesID int) (CreditsResponse, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/tv/%d/credits?language=en-US", seriesID), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf(APIBaseURL+"/tv/%d/credits?language=en-US", seriesID), nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)
@@ -274,7 +279,7 @@ func (c *Client) FetchTVCredits(seriesID int) (CreditsResponse, error) {
 }
 
 func (c *Client) FetchTVSeasonEpisodes(seriesID int, seasonNumber int) ([]TMDBEpisode, error) {
-	req, _ := http.NewRequest("GET", fmt.Sprintf("https://api.themoviedb.org/3/tv/%d/season/%d?language=en-US", seriesID, seasonNumber), nil)
+	req, _ := http.NewRequest("GET", fmt.Sprintf(APIBaseURL+"/tv/%d/season/%d?language=en-US", seriesID, seasonNumber), nil)
 	c.authenticateRequest(req)
 
 	res, err := c.client.Do(req)

@@ -86,7 +86,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 				movieModel.DatePublished = mov.ReleaseDate
 				movieModel.AggregateRating = mov.VoteAverage
 				movieModel.Description = mov.Overview
-				movieModel.Image = "https://image.tmdb.org/t/p/w500" + mov.PosterPath
+				movieModel.Image = tmdb.ImageBaseURL + mov.PosterPath
 				movieModel.TmdbID = mov.ID
 				movieModel.Duration = 0
 				movieModel.LanguageCode = langCode
@@ -111,7 +111,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 						}
 						var image string
 						if cast.ProfilePath != "" {
-							image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
+							image = tmdb.ImageBaseURL + cast.ProfilePath
 						}
 						
 						p := models.Person{
@@ -143,7 +143,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 							}
 							var image string
 							if crew.ProfilePath != "" {
-								image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+								image = tmdb.ImageBaseURL + crew.ProfilePath
 							}
 							
 							p := models.Person{
@@ -183,7 +183,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 				showModel.StartDate = s.FirstAirDate
 				showModel.AggregateRating = s.VoteAverage
 				showModel.Description = s.Overview
-				showModel.Image = "https://image.tmdb.org/t/p/w500" + s.PosterPath
+				showModel.Image = tmdb.ImageBaseURL + s.PosterPath
 				showModel.TmdbID = s.ID
 				showModel.NumberOfSeasons = 1
 				showModel.LanguageCode = s.OriginalLanguage
@@ -208,7 +208,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 						}
 						var image string
 						if cast.ProfilePath != "" {
-							image = "https://image.tmdb.org/t/p/w500" + cast.ProfilePath
+							image = tmdb.ImageBaseURL + cast.ProfilePath
 						}
 						
 						p := models.Person{
@@ -240,7 +240,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 							}
 							var image string
 							if crew.ProfilePath != "" {
-								image = "https://image.tmdb.org/t/p/w500" + crew.ProfilePath
+								image = tmdb.ImageBaseURL + crew.ProfilePath
 							}
 							
 							p := models.Person{
@@ -275,7 +275,7 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 
 						var image string
 						if ep.StillPath != "" {
-							image = "https://image.tmdb.org/t/p/w500" + ep.StillPath
+							image = tmdb.ImageBaseURL + ep.StillPath
 						}
 
 						offset := i * 9
