@@ -4,140 +4,86 @@
 
     <!-- Main Content Area -->
     <main class="py-4 py-lg-5 flex-grow-1">
-        
-                <!-- COLUMN 2: Results Area -->
-                <div class="col-lg-9">
-                    <div class="d-flex justify-content-between align-items-end border-bottom border-subtle pb-3 mb-4">
-                        <div>
-                            {{if .SearchQuery}}
-                            <h3 class="fw-bold mb-1">Search Results for "{{.SearchQuery}}" <span class="text-muted fs-5">({{.ResultCount}} Results Found)</span></h3>
-                            {{else}}
-                            <h3 class="fw-bold mb-1">Search Results</h3>
-                            {{end}}
-                        </div>
-                        <div class="d-flex align-items-center gap-2">
-                            <label class="small text-muted text-nowrap">Sort by:</label>
-                            <select class="form-select form-select-sm bg-light border-0 shadow-none" style="width: auto;">
-                                <option selected>Relevance</option>
-                                <option value="popular">Popularity</option>
-                            </select>
-                        </div>
-                    </div>
 
-                    <!-- Grid Results -->
-                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-3 g-4 mb-5">
-                        
-                        {{range .Movies}}
-                        <!-- Movie Result -->
-                        <div class="col">
-                            <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none">
-                                <div class="media-card h-100 position-relative">
-                                    <div class="corner-ribbon movie">Movie</div>
-                                    <div class="media-poster-container">
-                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
-                                        <div class="position-absolute bottom-0 start-0 p-2 w-100" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                                            <div class="d-flex justify-content-between align-items-center text-white">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-star-fill text-warning small me-1"></i>
-                                                    <span class="small fw-bold">{{.AggregateRating}}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3 bg-white">
-                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        {{end}}
-
-                        {{range .Shows}}
-                        <!-- TV Result -->
-                        <div class="col">
-                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none">
-                                <div class="media-card h-100 position-relative">
-                                    <div class="corner-ribbon tv">TV Show</div>
-                                    <div class="media-poster-container">
-                                        <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
-                                        <div class="position-absolute bottom-0 start-0 p-2 w-100" style="background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 100%);">
-                                            <div class="d-flex justify-content-between align-items-center text-white">
-                                                <div class="d-flex align-items-center">
-                                                    <i class="bi bi-star-fill text-warning small me-1"></i>
-                                                    <span class="small fw-bold">{{.AggregateRating}}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="p-3 bg-white">
-                                        <h6 class="fw-bold text-dark text-truncate mb-1">{{.Name}}</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        {{end}}
-
-                        {{range .People}}
-                        <!-- Person Result -->
-                        <div class="col">
-                            <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none">
-                                <div class="media-card h-100 position-relative bg-light border">
-                                    <div class="media-poster-container rounded-circle mx-auto mt-4 mb-2 shadow-sm" style="width: 140px; height: 140px; aspect-ratio: 1/1;">
-                                        <img src="{{if .Image}}{{.Image}}{{else}}https://ui-avatars.com/api/?name={{.Name}}{{end}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
-                                    </div>
-                                    <div class="p-3 text-center">
-                                        <h6 class="fw-bold text-dark mb-1">{{.Name}}</h6>
-                                    </div>
-                                </div>
-                            </a>
-                        </div>
-                        {{end}}
-
+        <div class="col-lg-12">
+            <!-- Header row: title + filter bar -->
+            <div class="d-flex justify-content-between align-items-end border-bottom border-subtle pb-3 mb-4 flex-wrap gap-2">
+                <div>
+                    {{if .SearchQuery}}
+                    <h3 class="fw-bold mb-1">Results for "{{.SearchQuery}}" <span class="text-muted fs-5">({{.ResultCount}} found)</span></h3>
+                    {{else}}
+                    <h3 class="fw-bold mb-1">Search Results</h3>
+                    {{end}}
+                </div>
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <!-- Type filter -->
+                    <div class="btn-group btn-group-sm" role="group" aria-label="Result type filter">
+                        <a href="?q={{.SearchQuery}}" class="btn btn-outline-secondary {{if eq .Filter ""}}active{{end}}">All</a>
+                        <a href="?q={{.SearchQuery}}&filter=movies" class="btn btn-outline-secondary {{if eq .Filter "movies"}}active{{end}}">Movies</a>
+                        <a href="?q={{.SearchQuery}}&filter=tv" class="btn btn-outline-secondary {{if eq .Filter "tv"}}active{{end}}">TV Shows</a>
+                        <a href="?q={{.SearchQuery}}&filter=people" class="btn btn-outline-secondary {{if eq .Filter "people"}}active{{end}}">People</a>
                     </div>
                 </div>
+            </div>
 
-                <!-- COLUMN 3: Filters Sidebar -->
-                <div class="col-lg-3 mb-4 mb-lg-0">
-                    <div class="bg-surface rounded-1 shadow-sm p-4 sticky-top" style="top: 100px; border: 1px solid var(--border-subtle);">
-                        <div class="d-flex justify-content-between align-items-center mb-4">
-                            <h5 class="fw-bold mb-0">Filters</h5>
-                            <button class="btn btn-sm btn-link text-muted text-decoration-none">Clear</button>
-                        </div>
-                        
-                        <!-- Type Filter -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Result Type</h6>
-                            <div class="d-flex flex-column gap-2">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeAll" checked>
-                                    <label class="form-check-label" for="typeAll">All Results</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeMovie">
-                                    <label class="form-check-label" for="typeMovie">Movies Only</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typeFilter" id="typeTv">
-                                    <label class="form-check-label" for="typeTv">TV Shows Only</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="typeFilter" id="typePeople">
-                                    <label class="form-check-label" for="typePeople">People Only</label>
-                                </div>
+            <!-- Grid Results — same breakpoints as movies-list -->
+            <div class="row row-cols-2 row-cols-lg-4 row-cols-xl-6 row-cols-xxl-8 g-4 mb-5">
+
+                {{range .Movies}}
+                <!-- Movie Result -->
+                <div class="col">
+                    <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                        <div class="media-card h-100 position-relative">
+                            <div class="corner-ribbon movie">Movie</div>
+                            <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-warning fw-bold rounded-1" style="font-size: 0.75rem; z-index: 2;"><i class="bi bi-star-fill me-1"></i>{{printf "%.1f" .AggregateRating}}</div>
+                            <div class="media-poster-container">
+                                <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                            </div>
+                            <div class="p-2 bg-white">
+                                <h6 class="fw-bold text-dark text-truncate mb-0 small">{{.Name}}</h6>
                             </div>
                         </div>
-
-                        <!-- Genre Filter -->
-                        <div class="mb-4">
-                            <h6 class="fw-bold small text-muted text-uppercase mb-3">Genres</h6>
-                            <select class="form-select bg-light border-0 shadow-none">
-                                <option selected>All Genres</option>
-                                <option value="action">Action</option>
-                                <option value="comedy">Comedy</option>
-                            </select>
-                        </div>
-                    </div>
+                    </a>
                 </div>
+                {{end}}
+
+                {{range .Shows}}
+                <!-- TV Result -->
+                <div class="col">
+                    <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                        <div class="media-card h-100 position-relative">
+                            <div class="corner-ribbon tv">TV Show</div>
+                            <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-warning fw-bold rounded-1" style="font-size: 0.75rem; z-index: 2;"><i class="bi bi-star-fill me-1"></i>{{printf "%.1f" .AggregateRating}}</div>
+                            <div class="media-poster-container">
+                                <img src="{{.Image}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                            </div>
+                            <div class="p-2 bg-white">
+                                <h6 class="fw-bold text-dark text-truncate mb-0 small">{{.Name}}</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {{end}}
+
+                {{range .People}}
+                <!-- Person Result -->
+                <div class="col">
+                    <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                        <div class="media-card h-100 position-relative bg-light border text-center">
+                            <div class="media-poster-container rounded-circle mx-auto mt-3 mb-2 shadow-sm overflow-hidden" style="width: 80px; height: 80px;">
+                                <img src="{{if .Image}}{{.Image}}{{else}}https://ui-avatars.com/api/?name={{.Name}}{{end}}" alt="{{.Name}}" class="media-poster" style="object-fit: cover;">
+                            </div>
+                            <div class="p-2">
+                                <h6 class="fw-bold text-dark text-truncate mb-0 small">{{.Name}}</h6>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+                {{end}}
+
+            </div>
+        </div>
+
     </main>
 
 {{end}}

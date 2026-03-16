@@ -59,6 +59,7 @@ type templateData struct {
 	MediaCount        int
 	Sort              string
 	Next              string
+	Filter            string
 }
 
 // newTemplateCache initializes an in-memory cache of parsed HTML templates.

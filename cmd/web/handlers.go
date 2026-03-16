@@ -291,6 +291,7 @@ func (app *application) searchView(w http.ResponseWriter, r *http.Request) {
 		data.ResultCount += len(data.People.([]models.Person))
 	}
 	data.SearchQuery = q
+	data.Filter = filter
 
 	app.render(w, http.StatusOK, "search.html", data)
 }
