@@ -153,22 +153,33 @@ func (m *PostgresDBRepo) GetMediaByID(id int) (*models.Media, error) {
 	return &med, nil
 }
 func (m *PostgresDBRepo) GetAllMovies(limit int, offset int, sort string) ([]models.Movie, error) {
-	orderBy := "m.date_published DESC"
+	var query string
 	switch sort {
 	case "pop":
-		orderBy = "m.aggregate_rating DESC, m.date_published DESC"
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN movies s ON m.id = s.media_id
+			WHERE m.media_type = 'Movie'
+			ORDER BY m.aggregate_rating DESC, m.date_published DESC
+			LIMIT $1 OFFSET $2`
 	case "rating":
-		orderBy = "m.aggregate_rating DESC"
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN movies s ON m.id = s.media_id
+			WHERE m.media_type = 'Movie'
+			ORDER BY m.aggregate_rating DESC
+			LIMIT $1 OFFSET $2`
+	default:
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN movies s ON m.id = s.media_id
+			WHERE m.media_type = 'Movie'
+			ORDER BY m.date_published DESC
+			LIMIT $1 OFFSET $2`
 	}
-
-	query := fmt.Sprintf(`
-		SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
-		FROM media m
-		JOIN movies s ON m.id = s.media_id
-		WHERE m.media_type = 'Movie'
-		ORDER BY %s
-		LIMIT $1 OFFSET $2
-	`, orderBy)
 
 	rows, err := m.DB.Query(query, limit, offset)
 	if err != nil {
@@ -196,22 +207,33 @@ func (m *PostgresDBRepo) GetUpcomingMovies(limit int) ([]models.Movie, error) {
 }
 
 func (m *PostgresDBRepo) GetAllShows(limit int, offset int, sort string) ([]models.TVSeries, error) {
-	orderBy := "m.date_published DESC"
+	var query string
 	switch sort {
 	case "pop":
-		orderBy = "m.aggregate_rating DESC, m.date_published DESC"
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN tv_series s ON m.id = s.media_id
+			WHERE m.media_type = 'TVSeries'
+			ORDER BY m.aggregate_rating DESC, m.date_published DESC
+			LIMIT $1 OFFSET $2`
 	case "rating":
-		orderBy = "m.aggregate_rating DESC"
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN tv_series s ON m.id = s.media_id
+			WHERE m.media_type = 'TVSeries'
+			ORDER BY m.aggregate_rating DESC
+			LIMIT $1 OFFSET $2`
+	default:
+		query = `
+			SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
+			FROM media m
+			JOIN tv_series s ON m.id = s.media_id
+			WHERE m.media_type = 'TVSeries'
+			ORDER BY m.date_published DESC
+			LIMIT $1 OFFSET $2`
 	}
-
-	query := fmt.Sprintf(`
-		SELECT m.id, m.name, m.slug, COALESCE(m.image, ''), COALESCE(m.date_published, ''), COALESCE(m.aggregate_rating, 0.0)
-		FROM media m
-		JOIN tv_series s ON m.id = s.media_id
-		WHERE m.media_type = 'TVSeries'
-		ORDER BY %s
-		LIMIT $1 OFFSET $2
-	`, orderBy)
 
 	rows, err := m.DB.Query(query, limit, offset)
 	if err != nil {
