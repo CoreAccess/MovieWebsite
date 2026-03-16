@@ -15,20 +15,20 @@
                         <form>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold small text-muted">First Name</label>
-                                    <input type="text" class="form-control bg-light border-0 py-3" required>
+                                    <label for="firstName" class="form-label fw-bold small text-muted">First Name</label>
+                                    <input type="text" class="form-control bg-light border-0 py-3" id="firstName" name="firstName" required>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label fw-bold small text-muted">Last Name</label>
-                                    <input type="text" class="form-control bg-light border-0 py-3" required>
+                                    <label for="lastName" class="form-label fw-bold small text-muted">Last Name</label>
+                                    <input type="text" class="form-control bg-light border-0 py-3" id="lastName" name="lastName" required>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small text-muted">Email Address</label>
-                                    <input type="email" class="form-control bg-light border-0 py-3" required>
+                                    <label for="email" class="form-label fw-bold small text-muted">Email Address</label>
+                                    <input type="email" class="form-control bg-light border-0 py-3" id="email" name="email" required>
                                 </div>
                                 <div class="col-12">
-                                    <label class="form-label fw-bold small text-muted">Subject</label>
-                                    <select class="form-select bg-light border-0 py-3">
+                                    <label for="subject" class="form-label fw-bold small text-muted">Subject</label>
+                                    <select class="form-select bg-light border-0 py-3" id="subject" name="subject">
                                         <option value="general">General Inquiry</option>
                                         <option value="support">Technical Support</option>
                                         <option value="partnership">Partnerships / eBay Network</option>
@@ -36,8 +36,8 @@
                                     </select>
                                 </div>
                                 <div class="col-12 border-bottom border-subtle pb-4 mb-2">
-                                    <label class="form-label fw-bold small text-muted">Message</label>
-                                    <textarea class="form-control bg-light border-0" rows="5" required></textarea>
+                                    <label for="message" class="form-label fw-bold small text-muted">Message</label>
+                                    <textarea class="form-control bg-light border-0" rows="5" id="message" name="message" required></textarea>
                                 </div>
                                 <div class="col-12 mt-4 text-center">
                                     <button type="submit" class="btn btn-primary-accent rounded-1 px-5 py-3 fw-bold w-100 shadow-sm">Send Message</button>
