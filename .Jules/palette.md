@@ -1,0 +1,3 @@
+## 2024-05-15 - Inconsistent Aria-Labels on Icon-Only Buttons
+**Learning:** Icon-only buttons (like share buttons) can have inconsistent accessibility metadata across similar pages. For example, the share button in `movies.html` had an `aria-label`, but the identical button structure in `tv_shows.html` lacked one, creating an unpredictable experience for screen reader users navigating different media types.
+**Action:** When auditing a page for accessibility, proactively check equivalent pages or components (like comparing TV Show details to Movie details) to ensure standard metadata like `aria-label` is applied consistently across the entire suite of media templates.
