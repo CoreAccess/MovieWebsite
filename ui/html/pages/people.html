@@ -1,123 +1,357 @@
 {{define "title"}}Person Details{{end}}
 
-{{define "head"}}
-    <style>
-        .hover-bg-light:hover { background-color: var(--bg-main); cursor: pointer; }
-        .transition-fast { transition: background-color var(--transition-fast); }
-    </style>
-{{end}}
-
 {{define "main"}}
-    <div class="col-lg-12">
-                <main>
-                    <div class="row gx-5">
-                        
-                        <!-- Left Sidebar (Photo & Personal Info) -->
-                        <div class="col-lg-3 col-md-4 mb-5 mb-md-0">
-                    <div class="media-poster-container shadow-lg mb-4" style="aspect-ratio: 2/3; border-radius: 4px;">
-                        <img src="{{.PersonDetail.Person.Image}}" alt="{{.PersonDetail.Person.Name}}" class="w-100 h-100 object-fit-cover">
-                    </div>
+<div class="ref-page">
+    <main class="ref-shell">
+        <div class="ref-grid">
+            <aside>
+                <img src="{{if .PersonDetail.Person.Image}}{{.PersonDetail.Person.Image}}{{else}}https://placehold.co/500x667/EEE/999?text=No+Photo{{end}}" alt="{{.PersonDetail.Person.Name}}" class="ref-photo" fetchpriority="high">
 
-                    <h5 class="fw-bold text-dark mb-3">Personal Info</h5>
-                    
-                    <div class="mb-3">
-                        <strong class="text-body d-block small">Known For</strong>
-                        <span class="text-muted small">Acting</span>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <strong class="text-body d-block small">Born</strong>
-                        <span class="text-muted small">{{.PersonDetail.Person.BirthDate}}</span>
-                    </div>
-
-                    <div class="mb-3">
-                        <strong class="text-body d-block small">Place of Birth</strong>
-                        <span class="text-muted small">{{if .PersonDetail.Person.BirthPlace}}{{.PersonDetail.Person.BirthPlace}}{{else}}Unknown{{end}}</span>
-                    </div>
-                    
-
-
-                    <div class="mb-3">
-                        <strong class="text-body d-block small">Speaks</strong>
-                        <span class="text-muted small">{{if .PersonDetail.Person.KnowsLanguage}}{{.PersonDetail.Person.KnowsLanguage}}{{else}}Unknown{{end}}</span>
-                    </div>
+                <div class="ref-action-stack">
+                    {{if .AuthenticatedUser}}
+                        <form action="{{if .IsFollowing}}/unfollow{{else}}/follow{{end}}" method="POST" class="follow-form">
+                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                            <input type="hidden" name="target_id" value="{{.PersonDetail.Person.ID}}">
+                            <input type="hidden" name="target_type" value="person">
+                            <button type="submit" class="btn ref-btn-primary w-100 fw-semibold">
+                                {{if .IsFollowing}}
+                                    <i class="bi bi-person-dash me-2"></i>Following
+                                {{else}}
+                                    <i class="bi bi-person-plus me-2"></i>Follow
+                                {{end}}
+                            </button>
+                        </form>
+                    {{else}}
+                        <a href="/login" class="btn ref-btn-primary w-100 fw-semibold"><i class="bi bi-person-plus me-2"></i>Follow</a>
+                    {{end}}
                 </div>
 
-                <!-- Right Main Content -->
-                <div class="col-lg-9 col-md-8">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between border-bottom border-subtle pb-3 mb-4">
-                        <div class="d-flex align-items-center gap-3">
-                            <h1 class="display-5 fw-black text-dark mb-0" style="letter-spacing: -1px;">{{.PersonDetail.Person.Name}}</h1>
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Personal Details</h2>
+                    <dl class="ref-facts">
+                        <div>
+                            <dt>Known For</dt>
+                            <dd>{{if .PersonDetail.Person.KnownForDepartment}}{{.PersonDetail.Person.KnownForDepartment}}{{else}}Film and television{{end}}</dd>
                         </div>
-                        <div class="d-flex align-items-center gap-4 mt-3 mt-md-0">
+                        <div>
+                            <dt>Born</dt>
+                            <dd>{{if .PersonDetail.Person.BirthDate}}{{formatDate .PersonDetail.Person.BirthDate}}{{else}}Unknown{{end}}</dd>
                         </div>
-                    </div>
-                    
-                    <h5 class="fw-bold text-dark mb-2">Biography</h5>
-                    <p class="text-body mb-5" style="font-size: 1.05rem; line-height: 1.6;">
-                        {{if .PersonDetail.Person.Description}}{{.PersonDetail.Person.Description}}{{else}}No biography available.{{end}}
-                    </p>
+                        <div>
+                            <dt>Birthplace</dt>
+                            <dd>{{if .PersonDetail.Person.BirthPlace}}{{.PersonDetail.Person.BirthPlace}}{{else}}Unknown{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Languages</dt>
+                            <dd>{{if .PersonDetail.Person.KnowsLanguage}}{{.PersonDetail.Person.KnowsLanguage}}{{else}}Unknown{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Followers</dt>
+                            <dd>{{.PersonDetail.Person.FollowerCount}}</dd>
+                        </div>
+                    </dl>
+                </section>
 
-                    <!-- Known For Grid -->
-                    <h5 class="fw-bold text-dark mb-3">Known For</h5>
-                    
-                    <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-4 flex-nowrap overflow-auto custom-scrollbar pb-3 mb-5">
+                <section class="ref-box">
+                    <h2 class="ref-box-title">More On FilmGap</h2>
+                    <div class="ref-inline-icons">
+                        <span class="ref-inline-icon"><i class="bi bi-link-45deg"></i></span>
+                        <span class="ref-inline-icon"><i class="bi bi-camera"></i></span>
+                        <span class="ref-inline-icon"><i class="bi bi-chat-dots"></i></span>
+                        <span class="ref-inline-icon"><i class="bi bi-bookmark-star"></i></span>
+                    </div>
+                    <p class="ref-note mt-3 mb-0">Use FilmGap to follow this person, track their work, and browse connected titles from our database.</p>
+                </section>
+
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Top Credits</h2>
+                    <div class="ref-box-list">
                         {{range $index, $movie := .PersonDetail.Movies}}
-                        {{if lt $index 5}}
-                        <div class="col">
-                            <a href="/movies/{{$movie.ID}}/{{$movie.Slug}}" class="text-decoration-none">
-                                <div class="media-card h-100">
-                                    <div class="media-poster-container">
-                                        {{if $movie.Image}}
-                                        <img src="{{$movie.Image}}" alt="{{$movie.Name}}" class="media-poster" style="object-fit: cover;">
-                                        {{else}}
-                                        <div class="bg-light h-100 d-flex align-items-center justify-content-center text-muted"><i class="bi bi-film fs-1"></i></div>
-                                        {{end}}
-                                    </div>
-                                    <div class="p-3 bg-white text-center">
-                                        <h6 class="fw-bold text-dark text-truncate mb-0">{{$movie.Name}}</h6>
+                            {{if lt $index 3}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $movie.Image}}{{$movie.Image}}{{else}}https://placehold.co/84x116/EEE/999?text=Poster{{end}}" alt="{{$movie.Name}}" class="ref-box-thumb" loading="lazy">
+                                <div>
+                                    <a href="/movies/{{$movie.ID}}/{{$movie.Slug}}" class="ref-box-link">{{$movie.Name}}</a>
+                                    <div class="ref-note">{{if $movie.DatePublished}}{{yearFromDate $movie.DatePublished}}{{else}}Movie{{end}}</div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{end}}
+                        {{range $index, $show := .PersonDetail.Shows}}
+                            {{if lt $index 3}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $show.Image}}{{$show.Image}}{{else}}https://placehold.co/84x116/EEE/999?text=Poster{{end}}" alt="{{$show.Name}}" class="ref-box-thumb" loading="lazy">
+                                <div>
+                                    <a href="/tv-shows/{{$show.ID}}/{{$show.Slug}}" class="ref-box-link">{{$show.Name}}</a>
+                                    <div class="ref-note">{{if $show.StartDate}}{{yearFromDate $show.StartDate}}{{else}}TV Series{{end}}</div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{end}}
+                    </div>
+                </section>
+            </aside>
+
+            <section>
+                <header class="ref-main-header">
+                    <p class="ref-kicker">Person</p>
+                    <h1 class="ref-title">{{.PersonDetail.Person.Name}}</h1>
+                    <p class="ref-subtitle">
+                        {{if .PersonDetail.Person.KnownForDepartment}}{{.PersonDetail.Person.KnownForDepartment}}{{else}}Film professional{{end}}
+                        {{if .PersonDetail.Person.BirthPlace}} from {{.PersonDetail.Person.BirthPlace}}{{end}}
+                        {{if .PersonDetail.Person.BirthDate}}, born {{formatDate .PersonDetail.Person.BirthDate}}{{end}}.
+                    </p>
+                    <div class="ref-header-meta">
+                        <span class="ref-header-meta-item"><strong>{{.PersonDetail.Person.FollowerCount}}</strong> followers</span>
+                        <span class="ref-header-meta-item">Popularity {{printf "%.1f" .PersonDetail.Person.PopularityScore}}</span>
+                        <span class="ref-header-meta-item">{{len .PersonDetail.Movies}} movie credits</span>
+                        <span class="ref-header-meta-item">{{len .PersonDetail.Shows}} TV credits</span>
+                        {{if .PersonDetail.Person.KnownForDepartment}}<span class="ref-header-meta-item">{{.PersonDetail.Person.KnownForDepartment}}</span>{{end}}
+                    </div>
+                </header>
+
+                <ul class="nav nav-pills ref-tabs" id="personTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="person-overview-tab" data-bs-toggle="pill" data-bs-target="#person-overview" type="button" role="tab" aria-selected="true">Overview</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="person-biography-tab" data-bs-toggle="pill" data-bs-target="#person-biography" type="button" role="tab" aria-selected="false">Biography</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="person-knownfor-tab" data-bs-toggle="pill" data-bs-target="#person-knownfor" type="button" role="tab" aria-selected="false">Known For</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="person-credits-tab" data-bs-toggle="pill" data-bs-target="#person-credits" type="button" role="tab" aria-selected="false">Filmography</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content ref-tab-content" aria-live="polite">
+                    <div class="tab-pane fade show active" id="person-overview" role="tabpanel" aria-labelledby="person-overview-tab">
+                        <section class="ref-panel ref-panel--flush">
+                            <div class="ref-overview-grid ref-overview-grid--text">
+                                <div class="ref-overview-copy">
+                                    <p class="ref-copy">{{if .PersonDetail.Person.Biography}}{{truncateWords .PersonDetail.Person.Biography 92}}{{else}}No biography is currently stored for this person.{{end}}</p>
+                                    <div class="ref-fact-pairs">
+                                        <div>
+                                            <span class="ref-fact-label">Known For</span>
+                                            <span class="ref-fact-value">{{if .PersonDetail.Person.KnownForDepartment}}{{.PersonDetail.Person.KnownForDepartment}}{{else}}Film and television{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Born</span>
+                                            <span class="ref-fact-value">{{if .PersonDetail.Person.BirthDate}}{{formatDate .PersonDetail.Person.BirthDate}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Birthplace</span>
+                                            <span class="ref-fact-value">{{if .PersonDetail.Person.BirthPlace}}{{.PersonDetail.Person.BirthPlace}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Languages</span>
+                                            <span class="ref-fact-value">{{if .PersonDetail.Person.KnowsLanguage}}{{.PersonDetail.Person.KnowsLanguage}}{{else}}Unknown{{end}}</span>
+                                        </div>
                                     </div>
                                 </div>
-                            </a>
-                        </div>
-                        {{end}}
-                        {{end}}
-                        
-                        {{if not .PersonDetail.Movies}}
-                        <div class="col-12"><p class="text-muted small">No known movies.</p></div>
-                        {{end}}
+                                <div class="ref-overview-aside">
+                                    <div class="ref-stat-grid">
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Followers</span>
+                                            <span class="ref-stat-value">{{.PersonDetail.Person.FollowerCount}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Popularity</span>
+                                            <span class="ref-stat-value">{{printf "%.1f" .PersonDetail.Person.PopularityScore}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Movie Credits</span>
+                                            <span class="ref-stat-value">{{len .PersonDetail.Movies}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">TV Credits</span>
+                                            <span class="ref-stat-value">{{len .PersonDetail.Shows}}</span>
+                                        </div>
+                                    </div>
+                                    <p class="ref-note mb-0">This profile combines personal details, popularity, and title credits from the FilmGap database.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Images</h2>
+                            <div class="ref-image-row">
+                                <div class="ref-image-card ref-image-card--portrait">
+                                    <img src="{{if .PersonDetail.Person.Image}}{{.PersonDetail.Person.Image}}{{else}}https://placehold.co/400x533/EEE/999?text=Photo{{end}}" alt="{{.PersonDetail.Person.Name}}" loading="lazy">
+                                </div>
+                                {{range $index, $movie := .PersonDetail.Movies}}
+                                    {{if lt $index 3}}
+                                    <div class="ref-image-card">
+                                        <img src="{{if $movie.Image}}{{$movie.Image}}{{else}}https://placehold.co/320x240/EEE/999?text=Poster{{end}}" alt="{{$movie.Name}}" loading="lazy">
+                                    </div>
+                                    {{end}}
+                                {{end}}
+                                {{range $index, $show := .PersonDetail.Shows}}
+                                    {{if lt $index 2}}
+                                    <div class="ref-image-card">
+                                        <img src="{{if $show.Image}}{{$show.Image}}{{else}}https://placehold.co/320x240/EEE/999?text=Poster{{end}}" alt="{{$show.Name}}" loading="lazy">
+                                    </div>
+                                    {{end}}
+                                {{end}}
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Known For</h2>
+                            <div class="ref-card-row">
+                                {{range $index, $movie := .PersonDetail.Movies}}
+                                    {{if lt $index 4}}
+                                    <a href="/movies/{{$movie.ID}}/{{$movie.Slug}}" class="ref-card">
+                                        <div class="ref-card-thumb"><img src="{{if $movie.Image}}{{$movie.Image}}{{else}}https://placehold.co/300x450/EEE/999?text=Poster{{end}}" alt="{{$movie.Name}}" loading="lazy"></div>
+                                        <span class="ref-card-title">{{$movie.Name}}</span>
+                                        <span class="ref-card-meta">{{if $movie.DatePublished}}{{yearFromDate $movie.DatePublished}}{{else}}Movie{{end}}</span>
+                                    </a>
+                                    {{end}}
+                                {{end}}
+                                {{range $index, $show := .PersonDetail.Shows}}
+                                    {{if lt $index 2}}
+                                    <a href="/tv-shows/{{$show.ID}}/{{$show.Slug}}" class="ref-card">
+                                        <div class="ref-card-thumb"><img src="{{if $show.Image}}{{$show.Image}}{{else}}https://placehold.co/300x450/EEE/999?text=Poster{{end}}" alt="{{$show.Name}}" loading="lazy"></div>
+                                        <span class="ref-card-title">{{$show.Name}}</span>
+                                        <span class="ref-card-meta">{{if $show.StartDate}}{{yearFromDate $show.StartDate}}{{else}}TV Series{{end}}</span>
+                                    </a>
+                                    {{end}}
+                                {{end}}
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Filmography</h2>
+                            <div class="ref-credit-list">
+                                {{range .PersonDetail.Movies}}
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">{{if .DatePublished}}{{yearFromDate .DatePublished}}{{else}}-{{end}}</div>
+                                    <div>
+                                        <a href="/movies/{{.ID}}/{{.Slug}}" class="ref-credit-name">{{.Name}}</a>
+                                        <span class="ref-credit-role">Movie</span>
+                                    </div>
+                                </div>
+                                {{end}}
+                                {{range .PersonDetail.Shows}}
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">{{if .StartDate}}{{yearFromDate .StartDate}}{{else}}-{{end}}</div>
+                                    <div>
+                                        <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="ref-credit-name">{{.Name}}</a>
+                                        <span class="ref-credit-role">TV Series</span>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Personal Details</h2>
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Department</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.KnownForDepartment}}{{.PersonDetail.Person.KnownForDepartment}}{{else}}Not set{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Birth Date</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.BirthDate}}{{formatDate .PersonDetail.Person.BirthDate}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Birthplace</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.BirthPlace}}{{.PersonDetail.Person.BirthPlace}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Gender</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.Gender}}{{.PersonDetail.Person.Gender}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Nationality</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.NationalityCode}}{{.PersonDetail.Person.NationalityCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Death Date</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.Deathday}}{{formatDate .PersonDetail.Person.Deathday}}{{else}}Living{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Languages</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.KnowsLanguage}}{{.PersonDetail.Person.KnowsLanguage}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Did You Know?</h2>
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Popularity</div>
+                                    <div><span class="ref-credit-role">Current popularity score: {{printf "%.1f" .PersonDetail.Person.PopularityScore}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Followers</div>
+                                    <div><span class="ref-credit-role">{{.PersonDetail.Person.FollowerCount}} FilmGap users currently follow this profile.</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Career Focus</div>
+                                    <div><span class="ref-credit-role">{{if .PersonDetail.Person.KnownForDepartment}}This profile is primarily categorized under {{.PersonDetail.Person.KnownForDepartment}}.{{else}}FilmGap has not assigned a primary department yet.{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
-                    <!-- Acting Credits List -->
-                    <h5 class="fw-bold text-dark mb-3">Credits</h5>
-                    <div class="bg-white rounded-1 shadow-sm border border-subtle overflow-hidden">
-                        
-                        {{range .PersonDetail.Movies}}
-                        <div class="d-flex p-3 border-bottom border-subtle align-items-center hover-bg-light transition-fast">
-                            <div class="text-center w-auto me-4 fw-medium text-dark" style="min-width: 50px;">{{if .DatePublished}}{{printf "%.4s" .DatePublished}}{{else}}-{{end}}</div>
-                            <div class="flex-grow-1">
-                                <a href="/movies/{{.ID}}/{{.Slug}}" class="fw-bold text-dark text-decoration-none hover-primary">{{.Name}}</a>
-                                <span class="d-block text-muted small">Movie</span>
-                            </div>
-                        </div>
-                        {{end}}
+                    <div class="tab-pane fade" id="person-biography" role="tabpanel" aria-labelledby="person-biography-tab">
+                        <section class="ref-panel">
+                            <p class="ref-copy">{{if .PersonDetail.Person.Biography}}{{.PersonDetail.Person.Biography}}{{else}}No biography is currently stored for this person.{{end}}</p>
+                        </section>
+                    </div>
 
-                        {{range .PersonDetail.Shows}}
-                        <div class="d-flex p-3 border-bottom border-subtle align-items-center hover-bg-light transition-fast">
-                            <div class="text-center w-auto me-4 fw-medium text-dark" style="min-width: 50px;">{{if .StartDate}}{{printf "%.4s" .StartDate}}{{else}}-{{end}}</div>
-                            <div class="flex-grow-1">
-                                <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="fw-bold text-dark text-decoration-none hover-primary">{{.Name}}</a>
-                                <span class="d-block text-muted small">TV Series</span>
+                    <div class="tab-pane fade" id="person-knownfor" role="tabpanel" aria-labelledby="person-knownfor-tab">
+                        <section class="ref-panel">
+                            <div class="ref-card-row">
+                                {{range .PersonDetail.Movies}}
+                                <a href="/movies/{{.ID}}/{{.Slug}}" class="ref-card">
+                                    <div class="ref-card-thumb"><img src="{{if .Image}}{{.Image}}{{else}}https://placehold.co/300x450/EEE/999?text=Poster{{end}}" alt="{{.Name}}" loading="lazy"></div>
+                                    <span class="ref-card-title">{{.Name}}</span>
+                                    <span class="ref-card-meta">{{if .DatePublished}}{{yearFromDate .DatePublished}}{{else}}Movie{{end}}</span>
+                                </a>
+                                {{end}}
+                                {{range .PersonDetail.Shows}}
+                                <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="ref-card">
+                                    <div class="ref-card-thumb"><img src="{{if .Image}}{{.Image}}{{else}}https://placehold.co/300x450/EEE/999?text=Poster{{end}}" alt="{{.Name}}" loading="lazy"></div>
+                                    <span class="ref-card-title">{{.Name}}</span>
+                                    <span class="ref-card-meta">{{if .StartDate}}{{yearFromDate .StartDate}}{{else}}TV Series{{end}}</span>
+                                </a>
+                                {{end}}
                             </div>
-                        </div>
-                        {{end}}
-                        
-                        {{if and (not .PersonDetail.Movies) (not .PersonDetail.Shows)}}
-                        <div class="p-3 text-muted small">No credits available.</div>
-                        {{end}}
+                        </section>
+                    </div>
+
+                    <div class="tab-pane fade" id="person-credits" role="tabpanel" aria-labelledby="person-credits-tab">
+                        <section class="ref-panel">
+                            <div class="ref-credit-list">
+                                {{range .PersonDetail.Movies}}
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">{{if .DatePublished}}{{yearFromDate .DatePublished}}{{else}}-{{end}}</div>
+                                    <div>
+                                        <a href="/movies/{{.ID}}/{{.Slug}}" class="ref-credit-name">{{.Name}}</a>
+                                        <span class="ref-credit-role">Movie</span>
+                                    </div>
+                                </div>
+                                {{end}}
+                                {{range .PersonDetail.Shows}}
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">{{if .StartDate}}{{yearFromDate .StartDate}}{{else}}-{{end}}</div>
+                                    <div>
+                                        <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="ref-credit-name">{{.Name}}</a>
+                                        <span class="ref-credit-role">TV Series</span>
+                                    </div>
+                                </div>
+                                {{end}}
+                            </div>
+                        </section>
                     </div>
                 </div>
-                    </div>
-                </main>
-            </div>
+            </section>
+        </div>
+    </main>
+</div>
 {{end}}

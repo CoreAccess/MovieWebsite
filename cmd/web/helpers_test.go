@@ -71,3 +71,4 @@ func TestGetSafeReferer(t *testing.T) {
 		})
 	}
 }
+

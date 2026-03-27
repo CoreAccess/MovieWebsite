@@ -54,154 +54,68 @@
                 </div>
 
                 <!-- 3. Social Posts Feed -->
-                
-                <!-- Post 1: Review -->
-                <div class="card border-0 shadow-sm rounded-1 mb-4 social-post">
-                    <div class="card-body p-4">
-                        <!-- Header -->
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="d-flex gap-3 align-items-center">
-                                <img src="https://placehold.co/100x100/0d6efd/ffffff?text=SJ" class="rounded-circle border" width="48" height="48" alt="Sarah J.">
-                                <div class="lh-sm">
-                                    <a href="/search" class="mb-0 fw-bold text-dark text-decoration-none hover-primary d-block">Sarah Jenkins <i class="bi bi-patch-check-fill text-primary ms-1 small"></i></a>
-                                    <small class="text-muted">@sarahj_watches · 2h ago</small>
+                {{if .Activity}}
+                    {{range .Activity}}
+                    <div class="card border-0 shadow-sm rounded-1 mb-4 social-post">
+                        <div class="card-body p-4">
+                            <!-- Header -->
+                            <div class="d-flex justify-content-between mb-3">
+                                <div class="d-flex gap-3 align-items-center">
+                                    <img src="{{.UserAvatar}}" class="rounded-circle border" width="48" height="48" alt="{{.Username}}">
+                                    <div class="lh-sm">
+                                        <a href="/profile/{{.UserID}}/{{.Username}}" class="mb-0 fw-bold text-dark text-decoration-none hover-primary d-block">{{.Username}}</a>
+                                        <small class="text-muted">{{humanDate .CreatedAt}}</small>
+                                    </div>
                                 </div>
+                                <button class="btn btn-sm btn-light rounded-circle text-muted h-100" aria-label="More options"><i class="bi bi-three-dots"></i></button>
                             </div>
-                            <button class="btn btn-sm btn-light rounded-circle text-muted h-100" aria-label="More options"><i class="bi bi-three-dots"></i></button>
-                        </div>
-                        
-                        <!-- Tags & Rating -->
-                        <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
-                            <span class="badge bg-subtle-primary text-primary-accent rounded-1">Review</span>
-                            {{if gt (len .Movies) 0}}{{with index .Movies 0}}
-                            <a href="/movies/{{.ID}}/{{.Slug}}" class="badge bg-light text-dark border border-subtle text-decoration-none hover-primary rounded-1">
-                                <i class="bi bi-film text-muted me-1"></i> {{.Name}}
-                            </a>
-                            {{end}}{{else}}
-                            <a href="/search" class="badge bg-light text-dark border border-subtle text-decoration-none hover-primary rounded-1">
-                                <i class="bi bi-film text-muted me-1"></i> View Media
-                            </a>
-                            {{end}}
-                            <div class="text-warning small ms-1">
-                                <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i>
+                            
+                            <!-- Activity Specific Content -->
+                            <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+                                {{if eq .ActivityType "review_post"}}
+                                    <span class="badge bg-subtle-primary text-primary-accent rounded-1">Review</span>
+                                    <a href="/{{if eq .TargetMediaType "Movie"}}movies{{else}}tv-shows{{end}}/{{.TargetID}}/{{.TargetSlug}}" class="badge bg-light text-dark border border-subtle text-decoration-none hover-primary rounded-1">
+                                        <i class="bi bi-film text-muted me-1"></i> {{.TargetName}}
+                                    </a>
+                                {{else if eq .ActivityType "followed_user"}}
+                                    <span class="badge bg-subtle-success text-success rounded-1">New Follow</span>
+                                    <span class="text-muted small">Started following a new user.</span>
+                                {{else if eq .ActivityType "followed_person"}}
+                                    <span class="badge bg-subtle-info text-info rounded-1">Following</span>
+                                    <span class="text-muted small">Started following <strong>{{.TargetName}}</strong></span>
+                                {{end}}
                             </div>
-                        </div>
 
-                        <!-- Content -->
-                        <p class="text-body mb-3">Just walked out of the theater for Dune Part Two. The cinematography is absolutely breathtaking. Denis Villeneuve has done the impossible with this adaptation! Austin Butler as Feyd-Rautha is terrifying. A must see in IMAX. 🏜️✨</p>
-                        
-                        <div class="rounded-1 overflow-hidden mb-3 border border-subtle">
-                            <img src="https://placehold.co/800x400/111827/ffffff?text=Dune+Part+Two+Cinematography" class="w-100" style="max-height: 350px; object-fit: cover;" alt="Post Image">
-                        </div>
-                        
-                        <!-- Actions -->
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-subtle px-2">
-                            <button class="btn p-0 text-muted hover-merch social-action transition-fast" title="Like post"><i class="bi bi-heart me-2 fs-5 align-middle"></i> <span class="visually-hidden">Likes: </span><span class="fw-medium">2.4K</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" title="Comment on post"><i class="bi bi-chat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Comments: </span><span class="fw-medium">142</span></button>
-                            <button class="btn p-0 text-muted hover-success social-action transition-fast" title="Repost"><i class="bi bi-arrow-repeat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Reposts: </span><span class="fw-medium">34</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" aria-label="Share post"><i class="bi bi-share fs-5"></i></button>
+                            <p class="text-body mb-3">
+                                {{if eq .ActivityType "review_post"}}
+                                    Shared a new rating and review for {{.TargetName}}.
+                                {{else if eq .ActivityType "followed_user"}}
+                                    Just connected with someone new!
+                                {{end}}
+                            </p>
+                            
+                            <!-- Actions (Placeholder for now) -->
+                            <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-subtle px-2">
+                                <button class="btn p-0 text-muted hover-merch social-action transition-fast" title="Like"><i class="bi bi-heart me-2 fs-5 align-middle"></i> <span class="fw-medium">Like</span></button>
+                                <button class="btn p-0 text-muted hover-primary social-action transition-fast" title="Comment"><i class="bi bi-chat me-2 fs-5 align-middle"></i> <span class="fw-medium">Comment</span></button>
+                                <button class="btn p-0 text-muted hover-success social-action transition-fast" title="Repost"><i class="bi bi-arrow-repeat me-2 fs-5 align-middle"></i> <span class="fw-medium">Repost</span></button>
+                                <button class="btn p-0 text-muted hover-primary social-action transition-fast" aria-label="Share"><i class="bi bi-share fs-5"></i></button>
+                            </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Post 2: Poll -->
-                <div class="card border-0 shadow-sm rounded-1 mb-4 social-post">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="d-flex gap-3 align-items-center">
-                                <img src="https://placehold.co/100x100/198754/ffffff?text=M" class="rounded-circle border" width="48" height="48" alt="Mike">
-                                <div class="lh-sm">
-                                    <a href="/search" class="mb-0 fw-bold text-dark text-decoration-none hover-primary d-block">Mike's Movie Corner</a>
-                                    <small class="text-muted">@mike_movies · 5h ago</small>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-light rounded-circle text-muted h-100" aria-label="More options"><i class="bi bi-three-dots"></i></button>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <span class="badge bg-subtle-merch text-merch rounded-1 mb-2"><i class="bi bi-bar-chart me-1"></i> Poll</span>
-                        </div>
-
-                        <p class="text-body fw-medium fs-5 mb-3">Okay settle this for me. Which is the superior cinematic universe right now?</p>
-                        
-                        <!-- Poll UI -->
-                        <div class="d-flex flex-column gap-2 mb-3">
-                            <div class="position-relative border border-subtle rounded-1 overflow-hidden" style="height: 40px; cursor: pointer;">
-                                <div class="bg-subtle-primary h-100 position-absolute top-0 start-0" style="width: 65%;"></div>
-                                <div class="position-relative h-100 d-flex justify-content-between align-items-center px-3 fw-medium">
-                                    <span>Marvel Cinematic Universe (MCU)</span>
-                                    <span>65%</span>
-                                </div>
-                            </div>
-                            <div class="position-relative border border-subtle rounded-1 overflow-hidden" style="height: 40px; cursor: pointer;">
-                                <div class="bg-light h-100 position-absolute top-0 start-0" style="width: 35%;"></div>
-                                <div class="position-relative h-100 d-flex justify-content-between align-items-center px-3 fw-medium text-muted">
-                                    <span>DC Universe (James Gunn era)</span>
-                                    <span>35%</span>
-                                </div>
-                            </div>
-                            <small class="text-muted mt-1">10,432 votes · 2 days left</small>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-subtle px-2">
-                            <button class="btn p-0 text-muted hover-merch social-action transition-fast" title="Like post"><i class="bi bi-heart me-2 fs-5 align-middle"></i> <span class="visually-hidden">Likes: </span><span class="fw-medium">451</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" title="Comment on post"><i class="bi bi-chat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Comments: </span><span class="fw-medium">89</span></button>
-                            <button class="btn p-0 text-muted hover-success social-action transition-fast" title="Repost"><i class="bi bi-arrow-repeat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Reposts: </span><span class="fw-medium">12</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" aria-label="Share post"><i class="bi bi-share fs-5"></i></button>
+                    {{end}}
+                {{else}}
+                    <!-- Empty State -->
+                    <div class="card border-0 shadow-sm rounded-1 p-5 text-center bg-white">
+                        <i class="bi bi-people text-muted opacity-25 mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="fw-bold text-dark">Your feed is empty</h5>
+                        <p class="text-muted mb-4 px-5">Follow other film lovers, critics, or actors to see their latest reviews and activity here!</p>
+                        <div class="d-flex justify-content-center gap-2">
+                            <a href="/people" class="btn btn-primary-accent rounded-1 fw-bold px-4 shadow-sm">Find People</a>
+                            <a href="/movies" class="btn btn-outline-dark rounded-1 fw-bold px-4">Browse Movies</a>
                         </div>
                     </div>
-                </div>
-
-                <!-- Post 3: Spoiler Guarded Review -->
-                <div class="card border-0 shadow-sm rounded-1 mb-4 social-post">
-                    <div class="card-body p-4">
-                        <div class="d-flex justify-content-between mb-3">
-                            <div class="d-flex gap-3 align-items-center">
-                                <img src="https://placehold.co/100x100/dc3545/ffffff?text=D" class="rounded-circle border" width="48" height="48" alt="David">
-                                <div class="lh-sm">
-                                    <a href="/search" class="mb-0 fw-bold text-dark text-decoration-none hover-primary d-block">David The Critic</a>
-                                    <small class="text-muted">@david_critiques · 6h ago</small>
-                                </div>
-                            </div>
-                            <button class="btn btn-sm btn-light rounded-circle text-muted h-100" aria-label="More options"><i class="bi bi-three-dots"></i></button>
-                        </div>
-                        
-                        <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
-                            <span class="badge bg-danger text-white rounded-1"><i class="bi bi-exclamation-triangle-fill me-1"></i> Spoiler</span>
-                            {{if gt (len .Shows) 0}}{{with index .Shows 0}}
-                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="badge bg-light text-dark border border-subtle text-decoration-none hover-primary rounded-1">
-                                <i class="bi bi-tv text-muted me-1"></i> {{.Name}}
-                            </a>
-                            {{end}}{{else}}
-                            <a href="/search" class="badge bg-light text-dark border border-subtle text-decoration-none hover-primary rounded-1">
-                                <i class="bi bi-tv text-muted me-1"></i> View Shows
-                            </a>
-                            {{end}}
-                        </div>
-                        
-                        <!-- Spoiler Blur Container -->
-                        <div class="position-relative rounded-1 overflow-hidden mb-3 border border-subtle" style="background-color: #f1f5f9;">
-                            <!-- Blurry content -->
-                            <div class="p-4" style="filter: blur(8px); user-select: none;">
-                                <p class="mb-2">I still can't believe they killed off that major character in episode 8! The way Homelander reacted completely changes the dynamic of the show moving forward.</p>
-                                <img src="https://placehold.co/800x400/111827/ffffff?text=The+Boys+S4+Ending" class="w-100 rounded-1 mt-2" style="max-height: 200px; object-fit: cover;" alt="Spoiler Image">
-                            </div>
-                            <!-- Overlay Button -->
-                            <div class="position-absolute top-50 start-50 translate-middle text-center w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: rgba(255,255,255,0.6);">
-                                <i class="bi bi-eye-slash-fill fs-2 text-danger mb-2"></i>
-                                <h6 class="fw-bold mb-3">This post contains spoilers</h6>
-                                <button class="btn btn-dark rounded-1 px-4 fw-medium shadow-sm">Reveal Spoiler</button>
-                            </div>
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-center mt-3 pt-3 border-top border-subtle px-2">
-                            <button class="btn p-0 text-muted hover-merch social-action transition-fast" title="Like post"><i class="bi bi-heart me-2 fs-5 align-middle"></i> <span class="visually-hidden">Likes: </span><span class="fw-medium">8.2K</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" title="Comment on post"><i class="bi bi-chat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Comments: </span><span class="fw-medium">924</span></button>
-                            <button class="btn p-0 text-muted hover-success social-action transition-fast" title="Repost"><i class="bi bi-arrow-repeat me-2 fs-5 align-middle"></i> <span class="visually-hidden">Reposts: </span><span class="fw-medium">102</span></button>
-                            <button class="btn p-0 text-muted hover-primary social-action transition-fast" aria-label="Share post"><i class="bi bi-share fs-5"></i></button>
-                        </div>
-                    </div>
-                </div>
+                {{end}}
 
             </div>
 

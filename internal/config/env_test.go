@@ -135,3 +135,4 @@ func TestLoadEnv_MalformedLine(t *testing.T) {
 		t.Errorf("Expected environment variable %s to be empty, got %q", key, val)
 	}
 }
+

@@ -8,7 +8,7 @@ import (
 	"log"
 	"os"
 
-	"movieweb/internal/config"
+	"filmgap/internal/config"
 	_ "github.com/lib/pq"
 )
 
@@ -33,3 +33,4 @@ func main() {
 		log.Println("Schema wiped successfully.")
 	}
 }
+

@@ -1,26 +1,21 @@
 package main
 
 import (
-	"context"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
-	"movieweb/internal/models"
+	"filmgap/internal/models"
+	"context"
 )
 
 func TestAdminRoleCheck(t *testing.T) {
-	// Create an application struct with discarded log output
 	app := &application{
-		errorLog: log.New(io.Discard, "", 0),
-		infoLog:  log.New(io.Discard, "", 0),
-		logger:   slog.New(slog.NewJSONHandler(io.Discard, nil)),
+		logger: slog.New(slog.NewJSONHandler(io.Discard, nil)),
 	}
 
-	// Create a dummy next handler
 	nextHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("OK"))
 	})
@@ -53,7 +48,6 @@ func TestAdminRoleCheck(t *testing.T) {
 			req, _ := http.NewRequest(http.MethodGet, "/admin", nil)
 
 			if tt.user != nil {
-				// The getUser helper expects a models.User struct value, not a pointer.
 				ctx := context.WithValue(req.Context(), "user", *tt.user)
 				req = req.WithContext(ctx)
 			}

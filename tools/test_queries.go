@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	"movieweb/internal/config"
-	"movieweb/internal/repository/dbrepo"
+	"filmgap/internal/config"
+	"filmgap/internal/repository/dbrepo"
 )
 
 func main() {
@@ -40,3 +40,4 @@ func main() {
 	cast, err := pgRepo.GetCastForMedia(3)
 	fmt.Printf("GetCastForMedia(3): %v, Err: %v\n", len(cast), err)
 }
+

@@ -1,0 +1,75 @@
+{{define "title"}}FilmGap Blog{{end}}
+
+{{define "main"}}
+<div class="container-xl py-5" style="max-width: 1600px;">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="display-4 fw-black text-dark mb-2" style="letter-spacing: -2px;">The FilmGap Blog</h1>
+            <p class="text-muted fs-5">Deep dives into cinema, industry trends, and community updates.</p>
+            <hr class="border-dark opacity-10">
+        </div>
+    </div>
+
+    <div class="row g-4">
+        {{range .BlogPosts}}
+        <div class="col-lg-6">
+            <div class="card h-100 border-0 shadow-sm bg-white" style="border: 1px solid rgba(0,0,0,0.1) !important; border-radius: 2px;">
+                <div class="row g-0 h-100">
+                    <div class="col-md-5">
+                        <img src="{{if .Image}}{{.Image}}{{else}}https://placehold.co/600x400/EEE/999?text=FilmGap+Blog{{end}}" 
+                             class="img-fluid h-100 object-fit-cover" 
+                             alt="{{.Title}}" 
+                             style="border-radius: 2px 0 0 2px; min-height: 200px;">
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card-body d-flex flex-column h-100 p-4">
+                            <div class="mb-2">
+                                <span class="badge bg-light text-primary border px-2 py-1" style="border-radius: 2px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Editorial</span>
+                            </div>
+                            <h3 class="card-title h4 fw-bold mb-3">
+                                <a href="/blog/{{.Slug}}" class="text-decoration-none text-dark hover-primary">{{.Title}}</a>
+                            </h3>
+                            <p class="card-text text-secondary mb-4 flex-grow-1" style="font-size: 0.95rem; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
+                                {{.Content}}
+                            </p>
+                            <div class="d-flex align-items-center justify-content-between mt-auto pt-3 border-top border-light">
+                                <div class="d-flex align-items-center gap-2">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 24px; height: 24px; font-size: 0.7rem; font-weight: 700;">
+                                        {{slice .Author 0 1}}
+                                    </div>
+                                    <span class="text-dark fw-bold small">{{.Author}}</span>
+                                </div>
+                                <span class="text-muted small">{{.CreatedAt.Format "Jan 02, 2006"}}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{else}}
+        <div class="col-12 text-center py-5">
+            <h3 class="text-muted">No blog posts found.</h3>
+            <p>Check back later for fresh cinematic insights!</p>
+        </div>
+        {{end}}
+    </div>
+
+    <!-- Pagination placeholder -->
+    <div class="row mt-5">
+        <div class="col-12 d-flex justify-content-center">
+            <nav aria-label="Blog pagination">
+                <ul class="pagination pagination-sm">
+                    <li class="page-item disabled"><a class="page-item border-dark rounded-1" href="#" style="border-radius: 2px !important;">&larr; Newer</a></li>
+                    <li class="page-item active"><a class="page-link bg-dark border-dark" href="#" style="border-radius: 2px !important;">1</a></li>
+                    <li class="page-item"><a class="page-link text-dark border-dark" href="#" style="border-radius: 2px !important;">Older &rarr;</a></li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<style>
+    .hover-primary:hover { color: #0d6efd !important; }
+    .fw-black { font-weight: 900; }
+</style>
+{{end}}

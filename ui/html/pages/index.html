@@ -1,331 +1,330 @@
 {{define "title"}}Home{{end}}
 
 {{define "main"}}
-<div class="row">
-    <!-- CENTER COLUMN: The Social Feed -->
-    <div class="col-xl-9 pb-5">
-                {{if not .AuthenticatedUser}}
-                <!-- GUEST VIEW -->
-                <div class="bg-dark text-white rounded-1 mb-4 position-relative overflow-hidden shadow-sm border border-subtle">
-                    <!-- Subtle gradient overlay -->
-                    <div class="position-absolute top-0 start-0 w-100 h-100" style="background: radial-gradient(circle at top right, rgba(13, 110, 253, 0.15), transparent 60%);"></div>
+<div class="container-xl py-5" style="max-width: 1600px;">
+    <!-- SECTION 1: HERO & STATS -->
+    <div class="row g-4 mb-5">
+        <!-- Hero Column -->
+        <div class="col-lg-9">
+            {{if .Hero}}
+                <div class="d-flex flex-column flex-md-row gap-4 align-items-center align-items-md-start">
+                    <div class="flex-shrink-0 position-relative" style="width: 100%; max-width: 320px;">
+                        <picture>
+                            <img src="{{if eq .Hero.Type "Movie"}}{{.Hero.Movie.Image}}{{else}}{{.Hero.Show.Image}}{{end}}" class="img-fluid rounded shadow-sm object-fit-cover w-100 aspect-poster border border-opacity-10 rounded-1" alt="Hero Art" fetchpriority="high">
+                        </picture>
+                        <div class="position-absolute top-0 end-0 rounded-circle text-white d-flex align-items-center justify-content-center shadow-sm" style="width: 48px; height: 48px; background-color: #0d6efd; transform: translate(25%, -25%); font-weight: 700; border: 3px solid #fff; font-size: 0.95rem;">
+                            {{if eq .Hero.Type "Movie"}}{{formatRating .Hero.Movie.AggregateRating}}{{else}}{{formatRating .Hero.Show.AggregateRating}}{{end}}
+                        </div>
+                    </div>
                     
-                    <div class="position-relative z-1 p-4 p-lg-5 text-center text-lg-start d-flex flex-column align-items-center align-items-lg-start">
-                        <h1 class="display-5 fw-black mb-3 text-white" style="letter-spacing: -1.5px; line-height: 1.1;">
-                            Track, Discover, and Discuss Your Favorite <br class="d-none d-lg-block"><span class="text-primary-accent">Movies & TV Shows</span>
+                    <div class="d-flex flex-column flex-grow-1">
+                        <h1 class="display-5 fw-bold mb-2 text-dark" style="letter-spacing: -1px;">
+                            {{if eq .Hero.Type "Movie"}}{{.Hero.Movie.Name}}{{else}}{{.Hero.Show.Name}}{{end}}
                         </h1>
-                        <p class="fs-5 mb-4 text-white-50" style="max-width: 650px;">
-                            Join our community to create your personalized watchlist, review what you've seen, and get smart recommendations based on your tastes.
+                        <div class="text-muted d-flex flex-wrap gap-2 align-items-center mb-3" style="font-size: 0.9rem; font-weight: 500;">
+                            <span class="badge border text-dark" >{{if eq .Hero.Type "Movie"}}{{.Hero.Movie.ContentRating}}{{else}}{{.Hero.Show.ContentRating}}{{end}}</span>
+                            <span>{{if eq .Hero.Type "Movie"}}{{formatDate .Hero.Movie.DatePublished}}{{else}}{{formatDate .Hero.Show.StartDate}}{{end}}</span>
+                            <span>&bull;</span>
+                            <span>{{if eq .Hero.Type "Movie"}}{{.Hero.Movie.Duration}} min{{else}}{{.Hero.Show.NumberOfSeasons}} Seasons{{end}}</span>
+                            {{if eq .Hero.Type "Movie"}}
+                                {{range .Hero.Genres}}
+                                <span class="badge bg-light text-primary border" >{{.Name}}</span>
+                                {{end}}
+                            {{else}}
+                                {{range .Hero.Genres}}
+                                <span class="badge bg-light text-primary border" >{{.Name}}</span>
+                                {{end}}
+                            {{end}}
+                        </div>
+                        <p class="mb-4 text-secondary lh-lg" style="max-width: 700px;">
+                            {{if eq .Hero.Type "Movie"}}{{.Hero.Movie.Description}}{{else}}{{.Hero.Show.Description}}{{end}}
                         </p>
-                        <div class="d-flex flex-wrap align-items-center gap-3">
-                            <a href="/signup" class="btn btn-primary-accent btn-lg rounded-1 fw-bold px-5 py-3 shadow hover-lift transition-fast d-inline-flex align-items-center fs-5">
-                                Join StreamLine <i class="bi bi-arrow-right ms-2"></i>
+                        <div class="d-flex flex-wrap gap-3">
+                            <a href="https://www.youtube.com/results?search_query={{if eq .Hero.Type "Movie"}}{{.Hero.Movie.Name}}{{else}}{{.Hero.Show.Name}}{{end}}+trailer" target="_blank" class="btn btn-dark px-4 py-2 fw-semibold d-flex align-items-center gap-2" >
+                                <i class="bi bi-play-fill fs-5"></i> Watch Trailer
                             </a>
-                            <a href="/login" class="btn btn-outline-light btn-lg rounded-1 fw-bold px-4 py-3 hover-lift transition-fast fs-5">
-                                Log In
-                            </a>
+                            <form action="/watchlist/toggle" method="POST" class="watchlist-form">
+                                <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                                <input type="hidden" name="media_type" value="{{if eq .Hero.Type "Movie"}}Movie{{else}}TVSeries{{end}}">
+                                <input type="hidden" name="media_id" value="{{if eq .Hero.Type "Movie"}}{{.Hero.Movie.ID}}{{else}}{{.Hero.Show.ID}}{{end}}">
+                                <button type="submit" class="btn btn-outline-dark px-4 py-2 fw-semibold" >
+                                    {{if eq .Hero.Type "Movie"}}
+                                        {{if index .WatchlistMap .Hero.Movie.ID}}
+                                            <i class="bi bi-bookmark-check-fill me-2"></i> On Watchlist
+                                        {{else}}
+                                            + Add to Watchlist
+                                        {{end}}
+                                    {{else}}
+                                        {{if index .WatchlistMap .Hero.Show.ID}}
+                                            <i class="bi bi-bookmark-check-fill me-2"></i> On Watchlist
+                                        {{else}}
+                                            + Add to Watchlist
+                                        {{end}}
+                                    {{end}}
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
+            {{end}}
+        </div>
+        
+        <!-- Stats Matrix Column -->
+        <div class="col-lg-3">
+            <h6 class="text-uppercase text-muted fw-bold mb-4" style="font-size: 0.75rem; letter-spacing: 1.5px;">Community Stats</h6>
+            <div class="row g-3">
+                <div class="col-6">
+                    <div class="p-3 border text-center bg-white" >
+                        <span class="d-block fs-3 fw-bold text-dark">{{.Stats.UserCount}}</span>
+                        <span class="text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Members</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 border text-center bg-white" >
+                        <span class="d-block fs-3 fw-bold text-dark">{{.Stats.MovieCount}}</span>
+                        <span class="text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Movies</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 border text-center bg-white" >
+                        <span class="d-block fs-3 fw-bold text-dark">{{.Stats.ShowCount}}</span>
+                        <span class="text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">TV Shows</span>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-3 border text-center bg-white" >
+                        <span class="d-block fs-3 fw-bold text-dark">{{.Stats.ReviewCount}}</span>
+                        <span class="text-muted text-uppercase" style="font-size: 0.65rem; letter-spacing: 0.5px;">Reviews</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                <!-- Features Row -->
-                <div class="row g-3 mb-5">
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 bg-white rounded-1 shadow-sm h-100 border border-subtle">
-                            <i class="bi bi-bookmark-fill fs-2 text-primary-accent mb-2 d-block"></i>
-                            <h6 class="fw-bold text-dark">Watchlists</h6>
-                            <p class="small text-muted mb-0">Never forget what you want to watch next.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 bg-white rounded-1 shadow-sm h-100 border border-subtle">
-                            <i class="bi bi-chat-quote-fill fs-2 text-merch mb-2 d-block"></i>
-                            <h6 class="fw-bold text-dark">Reviews</h6>
-                            <p class="small text-muted mb-0">Share your thoughts with other movie buffs.</p>
-                        </div>
-                    </div>
-                    <div class="col-md-4 text-center">
-                        <div class="p-3 bg-white rounded-1 shadow-sm h-100 border border-subtle">
-                            <i class="bi bi-stars fs-2 text-warning mb-2 d-block"></i>
-                            <h6 class="fw-bold text-dark">Discover</h6>
-                            <p class="small text-muted mb-0">Find emerging hits and classic recommendations.</p>
-                        </div>
-                    </div>
+    <!-- SECTION 2: TRENDING MATRIX -->
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-end mb-4 border-bottom pb-2">
+            <div>
+                <h2 class="fw-bold mb-0">Trending Now</h2>
+                <p class="text-muted small mb-0">What's capturing the world's attention today</p>
+            </div>
+            <div class="btn-group btn-group-sm p-1 bg-light"  id="trending-filters">
+                <button class="btn btn-white shadow-sm px-3 active" data-type="" >All</button>
+                <button class="btn btn-transparent px-3" data-type="Movie">Movies</button>
+                <button class="btn btn-transparent px-3" data-type="TV">TV Shows</button>
+                <button class="btn btn-transparent px-3" data-type="People">People</button>
+            </div>
+        </div>
+        <div class="position-relative">
+            <div class="d-flex gap-4 overflow-x-auto pb-3 hide-scrollbar" id="trending-scroll">
+                {{range .Trending}}
+                  <div class="trending-item flex-shrink-0">
+                    <a href="/{{if eq .MediaType "Movie"}}movies{{else if eq .MediaType "TVSeries"}}tv-shows{{else}}people{{end}}/{{.ID}}/{{.Slug}}" class="text-decoration-none">
+                        <img src="{{.Image}}" class="rounded shadow-sm mb-2 w-100 object-fit-cover aspect-poster" alt="{{.Name}}" loading="lazy">
+                        <h6 class="text-dark fw-bold mb-0 text-truncate">{{.Name}}</h6>
+                        <span class="text-muted small">
+                            {{if eq .MediaType "People"}}
+                                {{if .Year}}Age: {{.Year}}{{end}}
+                            {{else}}
+                                {{if .Year}}{{.Year}} &bull; {{end}}{{formatRating .AggregateRating}}
+                            {{end}}
+                        </span>
+                    </a>
                 </div>
                 {{end}}
-
-                <!-- Upcoming Movies & TV Shows row -->
-                <div class="mb-4 pt-1">
-                    <div class="d-flex justify-content-between align-items-end mb-3">
-                        <h5 class="fw-bold mb-0 text-dark">Upcoming Movies & TV Shows</h5>
-                        <a href="/search" class="text-decoration-none small fw-bold text-primary-accent hover-dark">View all <i class="bi bi-arrow-right"></i></a>
-                    </div>
-                    <div class="position-relative feed-scroll-wrapper px-2">
-                        <!-- Left Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-left d-none d-lg-flex" aria-label="Scroll left" onclick="scrollFeed(this, -1)">
-                            <i class="bi bi-chevron-left fs-5"></i>
-                        </button>
-                        
-                        <div class="feed-container custom-scrollbar pb-3 pt-1 w-100 ps-1">
-                            {{if .UpcomingMovies}}
-                            {{range .UpcomingMovies}}
-                            <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none feed-item">
-                                <div class="position-relative w-100 h-100 rounded-1 overflow-hidden shadow-sm social-short-card cursor-pointer">
-                                    <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-white fw-medium rounded-1" style="font-size: 0.65rem; z-index: 2;">Movie</div>
-                                    <img src="{{.Image}}" class="w-100 h-100" style="object-fit: cover;" alt="{{.Name}}">
-                                    <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-gradient-dark-bottom">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <span class="small fw-bold lh-1 text-truncate">{{.Name}}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                            {{end}}
-                            {{end}}
-
-                            {{if .NewShows}}
-                            {{range .NewShows}}
-                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none feed-item">
-                                <div class="position-relative w-100 h-100 rounded-1 overflow-hidden shadow-sm social-short-card cursor-pointer">
-                                    <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-white fw-medium rounded-1" style="font-size: 0.65rem; z-index: 2;">TV Show</div>
-                                    <img src="{{.Image}}" class="w-100 h-100" style="object-fit: cover;" alt="{{.Name}}">
-                                    <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-gradient-dark-bottom">
-                                        <div class="d-flex align-items-center mb-1">
-                                            <span class="small fw-bold lh-1 text-truncate">{{.Name}}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                            {{end}}
-                            {{end}}
-                        </div>
-                        
-                        <!-- Right Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-right d-none d-lg-flex" aria-label="Scroll right" onclick="scrollFeed(this, 1)">
-                            <i class="bi bi-chevron-right fs-5"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Popular Movies row -->
-                <div class="mb-4 pt-1">
-                    <div class="d-flex justify-content-between align-items-end mb-3">
-                        <h5 class="fw-bold mb-0 text-dark">Popular Movies</h5>
-                        <a href="/movies" class="text-decoration-none small fw-bold text-primary-accent hover-dark">View all <i class="bi bi-arrow-right"></i></a>
-                    </div>
-                    <div class="position-relative feed-scroll-wrapper px-2">
-                        <!-- Left Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-left d-none d-lg-flex" aria-label="Scroll left" onclick="scrollFeed(this, -1)">
-                            <i class="bi bi-chevron-left fs-5"></i>
-                        </button>
-                        
-                        <div class="feed-container custom-scrollbar pb-3 pt-1 w-100 ps-1">
-                            {{if .PopularMovies}}
-                            {{range .PopularMovies}}
-                            <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none feed-item">
-                                <div class="position-relative w-100 h-100 rounded-1 overflow-hidden shadow-sm social-short-card cursor-pointer">
-                                    <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-warning fw-bold rounded-1" style="font-size: 0.70rem; z-index: 2;"><i class="bi bi-star-fill me-1"></i>{{printf "%.1f" .AggregateRating}}</div>
-                                    <img src="{{.Image}}" class="w-100 h-100" style="object-fit: cover;" alt="{{.Name}}">
-                                    <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-gradient-dark-bottom">
-                                        <div class="d-flex align-items-center">
-                                            <span class="small fw-bold lh-1 text-truncate">{{.Name}}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                            {{end}}
-                            {{end}}
-                        </div>
-                        
-                        <!-- Right Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-right d-none d-lg-flex" aria-label="Scroll right" onclick="scrollFeed(this, 1)">
-                            <i class="bi bi-chevron-right fs-5"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Popular TV Shows row -->
-                <div class="mb-4 pt-1">
-                    <div class="d-flex justify-content-between align-items-end mb-3">
-                        <h5 class="fw-bold mb-0 text-dark">Popular TV Shows</h5>
-                        <a href="/tv-shows" class="text-decoration-none small fw-bold text-primary-accent hover-dark">View all <i class="bi bi-arrow-right"></i></a>
-                    </div>
-                    <div class="position-relative feed-scroll-wrapper px-2">
-                        <!-- Left Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-left d-none d-lg-flex" aria-label="Scroll left" onclick="scrollFeed(this, -1)">
-                            <i class="bi bi-chevron-left fs-5"></i>
-                        </button>
-                        
-                        <div class="feed-container custom-scrollbar pb-3 pt-1 w-100 ps-1">
-                            {{if .PopularShows}}
-                            {{range .PopularShows}}
-                            <a href="/tv-shows/{{.ID}}/{{.Slug}}" class="text-decoration-none feed-item">
-                                <div class="position-relative w-100 h-100 rounded-1 overflow-hidden shadow-sm social-short-card cursor-pointer">
-                                    <div class="position-absolute top-0 end-0 p-1 m-1 bg-dark bg-opacity-75 text-warning fw-bold rounded-1" style="font-size: 0.70rem; z-index: 2;"><i class="bi bi-star-fill me-1"></i>{{printf "%.1f" .AggregateRating}}</div>
-                                    <img src="{{.Image}}" class="w-100 h-100" style="object-fit: cover;" alt="{{.Name}}">
-                                    <div class="position-absolute bottom-0 start-0 w-100 p-2 text-white bg-gradient-dark-bottom">
-                                        <div class="d-flex align-items-center">
-                                            <span class="small fw-bold lh-1 text-truncate">{{.Name}}</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </a>
-                            {{end}}
-                            {{end}}
-                        </div>
-                        
-                        <!-- Right Scroll Button -->
-                        <button class="feed-scroll-btn feed-scroll-btn-right d-none d-lg-flex" aria-label="Scroll right" onclick="scrollFeed(this, 1)">
-                            <i class="bi bi-chevron-right fs-5"></i>
-                        </button>
-                    </div>
-                </div>
-
             </div>
+            <!-- Scroll Controls -->
+            <button class="btn btn-white shadow-sm position-absolute top-50 start-0 translate-middle-y rounded-circle border d-none d-md-flex align-items-center justify-content-center" id="trending-prev" style="width: 40px; height: 40px; margin-left: -20px;">&larr;</button>
+            <button class="btn btn-white shadow-sm position-absolute top-50 end-0 translate-middle-y rounded-circle border d-none d-md-flex align-items-center justify-content-center" id="trending-next" style="width: 40px; height: 40px; margin-right: -20px;">&rarr;</button>
+        </div>
+    </section>
 
-            <!-- RIGHT COLUMN: Discover, AI, & Trending -->
-            <div class="col-xl-3 d-none d-xl-block">
-                <div>
-                    {{if not .AuthenticatedUser}}
-                    <!-- Quick Sign Up Widget -->
-                    
-                    <!-- Coming Soon Spotlight -->
-                    <div class="card border-0 shadow-sm rounded-1 mb-4 overflow-hidden bg-dark text-white">
-                        <div class="position-relative">
-                            <div class="ratio ratio-16x9">
-                                <iframe width="560" height="315" src="https://www.youtube.com/embed/m08TxIsFTRI?si=hRBsjJnOxmXJNQWe" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
-                            </div>
-                        </div>
-                        <div class="card-body p-3">
-                            <h6 class="fw-bold mb-1 text-white">Project Hail Mary</h6>
-                            <p class="small text-white-50 mb-0">Ryland Grace awakens from a long sleep to find himself light-years from home... alone.</p>
-                            <div class="mt-2 small text-primary-accent fw-bold text-uppercase" style="font-size: 0.7rem; letter-spacing: 1px;">March 13, 2026</div>
-                        </div>
+    <!-- SECTION 3: 3-BOX (LISTS, FRANCHISE, ACTIVITY) -->
+    <div class="row g-4 mb-5">
+        <!-- Popular Lists -->
+        <div class="col-lg-4">
+            <div class="p-4 border bg-white h-100" >
+                <h5 class="fw-bold mb-4">Popular Lists</h5>
+                <div class="d-flex flex-column gap-3">
+                    {{range .PopularLists}}
+                    <div class="border-bottom pb-3">
+                        <a href="/list/{{.ID}}/{{.Slug}}" class="text-decoration-none text-dark fw-bold d-block mb-1">{{.Name}}</a>
+                        <span class="text-muted small">by {{.Username}} &bull; {{.ItemCount}} items</span>
                     </div>
-
-                    <!-- Trending Now -->
-                    <div class="card border-0 shadow-sm rounded-1 mb-4">
-                        <div class="card-body p-4">
-                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
-                                <i class="bi bi-graph-up-arrow text-primary-accent me-2"></i> Trending Now
-                            </h6>
-                            {{if .PopularMovies}}
-                            <div class="d-flex flex-column gap-2 trending-list">
-                                {{range $i, $m := .PopularMovies}}
-                                {{if lt $i 5}}
-                                <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none d-flex align-items-center gap-3 group trending-item p-2">
-                                    <!-- Rank number -->
-                                    <div class="trending-rank flex-shrink-0" style="min-width:2rem;"></div>
-                                    <!-- Poster thumbnail -->
-                                    <div class="flex-shrink-0" style="width:44px;height:64px;border-radius:4px;overflow:hidden;background:#e9ecef;">
-                                        {{if .Image}}
-                                        <img src="{{.Image}}" alt="{{.Name}}" style="width:100%;height:100%;object-fit:cover;">
-                                        {{else}}
-                                        <div class="d-flex align-items-center justify-content-center h-100 text-muted" style="font-size:1.2rem;"><i class="bi bi-film"></i></div>
-                                        {{end}}
-                                    </div>
-                                    <!-- Info -->
-                                    <div class="flex-grow-1 min-width-0">
-                                        <div class="d-flex align-items-center justify-content-between">
-                                            <h6 class="fw-bold mb-0 text-dark text-truncate group-hover-primary transition-fast" style="font-size: 0.85rem; max-width:120px;">{{.Name}}</h6>
-                                            <span class="trending-indicator"><i class="bi bi-caret-up-fill"></i></span>
-                                        </div>
-                                        <div class="small text-muted d-flex align-items-center gap-2 mt-1">
-                                            <span class="d-flex align-items-center gap-1">
-                                                <i class="bi bi-star-fill text-warning" style="font-size: 0.65rem;"></i>
-                                                <span style="font-size:0.8rem;">{{printf "%.1f" .AggregateRating}}</span>
-                                            </span>
-                                            {{if gt (len .Genres) 0}}
-                                            {{$genre := index .Genres 0}}
-                                            <span class="opacity-25">·</span>
-                                            <span class="badge rounded-pill" style="font-size:0.65rem;font-weight:600;background:rgba(99,102,241,0.08);color:#6366f1;padding:2px 8px;">{{$genre.Name}}</span>
-                                            {{end}}
-                                        </div>
-                                    </div>
-                                </a>
-                                {{end}}
-                                {{end}}
-                            </div>
-                            {{end}}
-                        </div>
-                    </div>
-
-                    <!-- Recent Community Reviews -->
-                    <div class="card border-0 shadow-sm rounded-1 mb-4">
-                        <div class="card-body p-4">
-                            <h6 class="fw-bold mb-3 text-dark d-flex align-items-center">
-                                <i class="bi bi-chat-left-dots text-merch me-2"></i> Community Activity
-                            </h6>
-                            <div class="d-flex flex-column gap-3">
-                                <div class="p-3 bg-light rounded-1 border border-subtle">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <img src="https://placehold.co/32x32/e2e8f0/64748b?text=JD" class="rounded-circle" width="24" height="24" alt="User">
-                                        <span class="small fw-bold text-dark">James D.</span>
-                                        <div class="ms-auto text-warning" style="font-size: 0.7rem;">
-                                            <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i>
-                                        </div>
-                                    </div>
-                                    <p class="small text-muted mb-1 italic">"A masterpiece of modern sci-fi. The attention to detail is staggering."</p>
-                                    <div class="small fw-bold text-primary-accent" style="font-size: 0.75rem;">on Interstellar</div>
-                                </div>
-                                <div class="p-3 bg-light rounded-1 border border-subtle">
-                                    <div class="d-flex align-items-center gap-2 mb-2">
-                                        <img src="https://placehold.co/32x32/e2e8f0/64748b?text=SM" class="rounded-circle" width="24" height="24" alt="User">
-                                        <span class="small fw-bold text-dark">Sarah M.</span>
-                                        <div class="ms-auto text-warning" style="font-size: 0.7rem;">
-                                            <i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star"></i>
-                                        </div>
-                                    </div>
-                                    <p class="small text-muted mb-1 italic">"Gripping from start to finish. One of the best thrillers this year."</p>
-                                    <div class="small fw-bold text-primary-accent" style="font-size: 0.75rem;">on Cold Storage</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Community Stats (Existing) -->
-                    <div class="card border-0 shadow-sm rounded-1 mb-4">
-                        <div class="card-body p-4">
-                            <h6 class="fw-bold mb-3 text-dark">Community Impact</h6>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Registered Users</span>
-                                <span class="fw-bold">14,231+</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small">Movies Tracked</span>
-                                <span class="fw-bold">45,100+</span>
-                            </div>
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-muted small">Daily Reviews</span>
-                                <span class="fw-bold text-success">+Hundreds</span>
-                            </div>
-                            <hr class="text-muted opacity-25">
-                            <a href="/about" class="text-decoration-none small fw-bold text-primary-accent">Learn more about us <i class="bi bi-arrow-right"></i></a>
-                        </div>
-                    </div>
-
-                    <!-- On This Day -->
-                    <div class="card border-0 shadow-sm rounded-1 mb-4 bg-gradient-primary text-white border-0">
-                        <div class="card-body p-4">
-                            <h6 class="fw-bold mb-3 text-white d-flex align-items-center">
-                                <i class="bi bi-calendar-event me-2"></i> On This Day
-                            </h6>
-                            <div class="text-center py-2">
-                                <div class="display-6 fw-bold mb-2">25</div>
-                                <div class="text-uppercase small fw-bold mb-3" style="letter-spacing: 2px;">Years Ago</div>
-                                <h6 class="fw-bold mb-2 text-white">The Matrix</h6>
-                                <p class="small text-white-50 mb-0">The ground-breaking sci-fi classic was released on this day in 1999.</p>
-                            </div>
-                            <hr class="bg-white opacity-25">
-                            <a href="/search" class="text-decoration-none small fw-bold text-white d-block text-center hover-lift">Explore History <i class="bi bi-arrow-right ms-1"></i></a>
+                    {{end}}
+                </div>
+                <a href="/lists" class="btn btn-link text-decoration-none p-0 mt-4 fw-bold small text-primary">Browse All Lists &rarr;</a>
+            </div>
+        </div>
+        <!-- Franchise Spotlight -->
+        <div class="col-lg-4">
+            <div class="p-0 border bg-dark h-100 overflow-hidden position-relative" style="min-height: 300px;">
+                {{if .Franchise.ID}}
+                <img src="{{.Franchise.Image}}" class="w-100 h-100 object-fit-cover opacity-50 position-absolute top-0 start-0" alt="Franchise" loading="lazy">
+                <div class="position-absolute bottom-0 p-4 text-white z-1 w-100" style="background: linear-gradient(transparent, rgba(0,0,0,0.8));">
+                    <span class="badge bg-primary mb-2" >Franchise Spotlight</span>
+                    <h3 class="fw-bold mb-2">{{.Franchise.Name}}</h3>
+                    <p class="small opacity-75 mb-3">{{.Franchise.Description}}</p>
+                    <a href="/franchise/{{.Franchise.Slug}}" class="btn btn-light btn-sm fw-bold" >Explore Franchise</a>
+                </div>
+                {{else}}
+                <div class="d-flex align-items-center justify-content-center h-100 text-white-50">
+                    <span>New Franchise Features Coming Soon</span>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        <!-- Activity Feed -->
+        <div class="col-lg-4">
+            <div class="p-4 border bg-white h-100" >
+                <h5 class="fw-bold mb-4">Live Activity</h5>
+                <div class="d-flex flex-column gap-3 overflow-y-auto" style="max-height: 400px; scrollbar-width: none;">
+                    {{range .Activity}}
+                    <div class="d-flex gap-3 align-items-start border-bottom pb-3">
+                        <img src="{{if .UserAvatar}}{{.UserAvatar}}{{else}}/static/img/default-avatar.png{{end}}" class="rounded-circle" style="width: 32px; height: 32px;" alt="User">
+                        <div>
+                            <p class="mb-0 small text-dark"><a href="/profile/{{.Username}}" class="text-decoration-none fw-bold text-dark hover-primary">{{.Username}}</a> {{.ActivityType}} <span class="fw-bold">{{.TargetName}}</span></p>
+                            <span class="text-muted" style="font-size: 0.7rem;">{{humanDate .CreatedAt}}</span>
                         </div>
                     </div>
                     {{end}}
-
-
-
                 </div>
+            </div>
+        </div>
     </div>
 
+    <!-- SECTION 4: BLOG & PHOTOS -->
+    <div class="row g-4 mb-5">
+        <!-- Blog Section -->
+        <div class="col-lg-8">
+            <div class="p-4 border bg-white h-100" >
+                <h5 class="fw-bold mb-4">The FilmGap Blog</h5>
+                <div class="row g-4">
+                    {{if .BlogPosts}}
+                    <!-- Featured Post -->
+                    {{with index .BlogPosts 0}}
+                    <div class="col-md-7">
+                        <div class="position-relative mb-3 overflow-hidden rounded-1 aspect-16-9">
+                            <img src="{{if .Image}}{{.Image}}{{else}}/static/img/blog-placeholder.jpg{{end}}" class="w-100 h-100 object-fit-cover" alt="Blog">
+                        </div>
+                        <h4 class="fw-bold mb-2"><a href="/blog/{{.Slug}}" class="text-decoration-none text-dark">{{.Title}}</a></h4>
+                        <p class="text-muted small mb-0">{{.Content}}</p> <!-- Note: Markdown rendered on server -->
+                    </div>
+                    {{end}}
+                    <!-- More Posts -->
+                    <div class="col-md-5">
+                        <div class="d-flex flex-column gap-4">
+                            {{range slice .BlogPosts 1}}
+                            <div class="d-flex gap-3">
+                                <img src="{{if .Image}}{{.Image}}{{else}}/static/img/blog-placeholder.jpg{{end}}" class="rounded object-fit-cover aspect-1-1" style="width: 80px; height: 80px;" alt="Blog">
+                                <div>
+                                    <h6 class="fw-bold mb-1"><a href="/blog/{{.Slug}}" class="text-decoration-none text-dark">{{.Title}}</a></h6>
+                                    <span class="text-muted" style="font-size: 0.7rem;">{{.CreatedAt.Format "Jan 02, 2006"}}</span>
+                                </div>
+                            </div>
+                            {{end}}
+                        </div>
+                    </div>
+                    {{end}}
+                </div>
+            </div>
+        </div>
+        <!-- Photos Grid -->
+        <div class="col-lg-4">
+            <div class="p-4 border bg-white h-100" >
+                <h5 class="fw-bold mb-4">Community Gallery</h5>
+                <div class="row g-2">
+                    {{range .Photos}}
+                    <div class="col-4">
+                        <img src="{{.ImageURL}}" class="w-100 object-fit-cover rounded shadow-xs aspect-1-1 cursor-pointer rounded-1" alt="Gallery" loading="lazy">
+                    </div>
+                    {{end}}
+                </div>
+                <button class="btn btn-outline-dark btn-sm w-100 mt-4 fw-bold" >View All Photos</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SECTION 5: 4-COLUMN FOOTER GRID -->
+    <div class="row g-4">
+        <!-- birthdays -->
+        <div class="col-md-3">
+            <h6 class="text-uppercase text-muted fw-bold mb-4" style="font-size: 0.75rem; letter-spacing: 1px;">Actor Birthdays Today</h6>
+            <div class="d-flex flex-column gap-3">
+                {{range .Birthdays}}
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{if .Image}}{{.Image}}{{else}}/static/img/default-avatar.png{{end}}" class="rounded-circle" style="width: 40px; height: 40px;" alt="Actor">
+                    <div>
+                        <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none text-dark fw-bold d-block small">{{.Name}}</a>
+                        <span class="text-muted" style="font-size: 0.7rem;">{{.KnownForDepartment}}</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        <!-- Fan Favorites -->
+        <div class="col-md-3">
+            <h6 class="text-uppercase text-muted fw-bold mb-4" style="font-size: 0.75rem; letter-spacing: 1px;">Fan Favorites</h6>
+            <div class="d-flex flex-column gap-3">
+                {{range .FanFavorites}}
+                <div class="d-flex gap-3">
+                    <img src="{{.Image}}" class="rounded w-45 aspect-poster" alt="Poster">
+                    <div>
+                        <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none text-dark fw-bold d-block small">{{.Name}}</a>
+                        <span class="text-muted" style="font-size: 0.7rem;">{{.Year}} &bull; {{formatRating .AggregateRating}}</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        <!-- Box Office -->
+        <div class="col-md-3">
+            <h6 class="text-uppercase text-muted fw-bold mb-4" style="font-size: 0.75rem; letter-spacing: 1px;">Top Box Office</h6>
+            <div class="d-flex flex-column gap-3">
+                {{range .BoxOffice}}
+                <div class="d-flex gap-3">
+                    <img src="{{.Image}}" class="rounded w-45 aspect-poster" alt="Poster">
+                    <div>
+                        <a href="/movies/{{.ID}}/{{.Slug}}" class="text-decoration-none text-dark fw-bold d-block small">{{.Name}}</a>
+                        <span class="text-muted" style="font-size: 0.7rem;">Highest Grossing</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+        <!-- Popular Celebs -->
+        <div class="col-md-3">
+            <h6 class="text-uppercase text-muted fw-bold mb-4" style="font-size: 0.75rem; letter-spacing: 1px;">Popular Celebrities</h6>
+            <div class="d-flex flex-column gap-3">
+                {{range .PopularCelebs}}
+                <div class="d-flex align-items-center gap-3">
+                    <img src="{{if .Image}}{{.Image}}{{else}}/static/img/default-avatar.png{{end}}" class="rounded-circle" style="width: 40px; height: 40px;" alt="Celeb">
+                    <div>
+                        <a href="/people/{{.ID}}/{{.Slug}}" class="text-decoration-none text-dark fw-bold d-block small">{{.Name}}</a>
+                        <span class="text-muted" style="font-size: 0.7rem;">Trending</span>
+                    </div>
+                </div>
+                {{end}}
+            </div>
+        </div>
+    </div>
 </div>
+
+<style>
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .btn-white { background-color: #fff; color: #000; border: 1px solid #dee2e6; }
+    .btn-white:hover { background-color: #f8f9fa; }
+    .btn-white.active { background-color: #000 !important; color: #fff !important; border-color: #000 !important; }
+    .shadow-xs { box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+</style>
 {{end}}
+
+{{define "scripts"}}
+<script type="module" src="/static/js/home.js"></script>
+{{end}}
+
+
+
+
+

@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
-	"movieweb/internal/models"
+	"filmgap/internal/models"
 
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
@@ -15,118 +15,97 @@ import (
 
 func (app *application) signupView(w http.ResponseWriter, r *http.Request) {
 	data := app.getTemplateData("Sign Up", r)
-	app.render(w, http.StatusOK, "signup.html", data)
+	app.render(w, r, http.StatusOK, "signup.html", data)
 }
 
 // signupPost handles the HTTP POST request to create a new user account.
-// It parses form data, hashes the password for security, and saves the user to the database.
 func (app *application) signupPost(w http.ResponseWriter, r *http.Request) {
-	// Parse the incoming form submission to make form fields available
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
-	// Extract form values
 	username := r.PostForm.Get("username")
 	email := r.PostForm.Get("email")
 	password := r.PostForm.Get("password")
 
-	// Hashes the user's password using the bcrypt algorithm with a cost of 12.
-	// We never store plain text passwords in the database to prevent exposure if the DB is compromised.
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
-		http.Error(w, "Internal Server Error", 500)
+		app.serverError(w, r, err)
 		return
 	}
 
-	// Insert the new user record into the database with the hashed password
 	err = app.Service.CreateUser(username, email, string(hash))
 	if err != nil {
-		// If creation fails (e.g., username or email already exists due to UNIQUE constraints),
-		// redirect back to the signup page with an error flag.
+		// Duplicate username/email — redirect with error flag (no server error needed)
 		http.Redirect(w, r, "/signup?error=1", http.StatusSeeOther)
 		return
 	}
 
-	// On successful account creation, redirect the user to the login page
 	http.Redirect(w, r, "/login", http.StatusSeeOther)
 }
 
 func (app *application) loginView(w http.ResponseWriter, r *http.Request) {
 	data := app.getTemplateData("Login", r)
 	data.Next = r.URL.Query().Get("next")
-	app.render(w, http.StatusOK, "login.html", data)
+	app.render(w, r, http.StatusOK, "login.html", data)
 }
 
-// loginPost processes user login attempts. It verifies credentials against the database,
-// establishes a session, and sets a secure cookie on the client's browser.
+// loginPost processes user login attempts.
 func (app *application) loginPost(w http.ResponseWriter, r *http.Request) {
-	// Parse the login form submission
 	err := r.ParseForm()
 	if err != nil {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
+		app.clientError(w, http.StatusBadRequest)
 		return
 	}
 
 	email := r.PostForm.Get("email")
 	password := r.PostForm.Get("password")
 
-	// Attempt to find a matching user by their email address
 	user, err := app.Service.GetUserByEmail(email)
 	if err != nil {
-		// User not found
+		// User not found — redirect with error flag
 		http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
 		return
 	}
 
-	// Compare the provided password with the hashed password stored in the database.
-	// If they match, the user is authenticated.
 	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
 	if err != nil {
-		// Passwords do not match
+		// Wrong password — redirect with error flag
 		http.Redirect(w, r, "/login?error=1", http.StatusSeeOther)
 		return
 	}
 
-	// Create a new Session
-	// Generate a unique identifier (UUID) for the session to prevent session hijacking
 	sessionID := uuid.New().String()
 	session := models.Session{
 		ID:        sessionID,
 		UserID:    user.ID,
-		ExpiresAt: time.Now().Add(24 * time.Hour), // Set the session to expire in 24 hours
+		ExpiresAt: time.Now().Add(24 * time.Hour),
 	}
 
-	// Store the session in the database so the server can track active logins
 	err = app.Service.CreateSession(session)
 	if err != nil {
-		log.Println(err)
-		http.Error(w, "Server Error", 500)
+		app.serverError(w, r, err)
 		return
 	}
 
-	// Send the session ID back to the user's browser in a cookie
 	http.SetCookie(w, &http.Cookie{
 		Name:     "session",
-		Value:    sessionID, // The UUID we just generated
-		Path:     "/",       // The cookie is valid for the entire site
+		Value:    sessionID,
+		Path:     "/",
 		Expires:  session.ExpiresAt,
-		HttpOnly: true,                    // Mitigates XSS attacks (client-side scripts cannot access the cookie)
-		Secure:   true,                    // Mitigates MITM attacks (ensures cookie is only sent over HTTPS)
-		SameSite: http.SameSiteStrictMode, // Mitigates Cross-Site Request Forgery (CSRF)
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteStrictMode,
 	})
 
-	// Check if the user was trying to access a protected page before logging in.
-	// If 'next' is present and valid, redirect them there.
 	nextURL := r.PostForm.Get("next")
 	if isSafeRedirect(nextURL) {
 		http.Redirect(w, r, nextURL, http.StatusSeeOther)
 		return
 	}
 
-	// Default redirect upon successful login is the homepage
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -149,39 +128,28 @@ func (app *application) logoutPost(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-// sessionMiddleware is an HTTP middleware function that intercepts incoming requests
-// to determine if the user is authenticated. It checks for a session cookie and adds user data
-// to the request context if a valid session exists.
+// sessionMiddleware resolves the session cookie and attaches the authenticated user to context.
 func (app *application) sessionMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Attempt to read the 'session' cookie from the incoming request
 		cookie, err := r.Cookie("session")
 		if err == nil && cookie.Value != "" {
-			// Look up the session ID in the database
 			session, err := app.Service.GetSession(cookie.Value)
 
-			// Verify the session exists and hasn't expired
 			if err == nil && time.Now().Before(session.ExpiresAt) {
-				// Retrieve the associated user from the database
 				user, err := app.Service.GetUserByID(session.UserID)
 				if err == nil {
-					// Attach the user object to the request context.
-					// This allows subsequent handlers (like 'profileView') to access the logged-in user's data
-					// by calling `r.Context().Value("user")`.
 					ctx := context.WithValue(r.Context(), "user", user)
 					r = r.WithContext(ctx)
 				}
 			} else {
-				// If the session is invalid or expired, delete it from the database to clean up
 				app.Service.DeleteSession(cookie.Value)
 			}
 		}
-		// Pass control to the next handler in the chain (with the potentially updated context)
 		next.ServeHTTP(w, r)
 	})
 }
 
-// Helper to get user from request context
+// getUser retrieves the authenticated user from the request context.
 func (app *application) getUser(r *http.Request) *models.User {
 	user, ok := r.Context().Value("user").(models.User)
 	if !ok {
@@ -194,6 +162,13 @@ func (app *application) requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		user := app.getUser(r)
 		if user == nil {
+			if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				fmt.Fprintf(w, `{"error": "Authentication required", "login_url": "/login"}`)
+				return
+			}
+
 			nextParam := ""
 			if r.Method == "GET" && r.URL.Path != "" {
 				nextParam = "?next=" + url.QueryEscape(r.URL.Path)

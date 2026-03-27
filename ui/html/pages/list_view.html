@@ -1,0 +1,102 @@
+{{define "title"}}{{.List.Name}}{{end}}
+
+{{define "main"}}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/lists">My Lists</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{{.List.Name}}</li>
+        </ol>
+    </nav>
+
+    <div class="row align-items-end mb-4">
+        <div class="col-md-8">
+            <h1 class="display-5 fw-bold mb-1">{{.List.Name}}</h1>
+            <p class="lead text-muted mb-0">
+                Created by <a href="/profile/{{.List.UserID}}/{{.List.Username}}" class="text-dark fw-bold text-decoration-none">{{.List.Username}}</a>
+                <span class="mx-2 text-subtle">•</span>
+                <span class="text-muted small">{{.List.FollowerCount}} Followers</span>
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0 d-flex justify-content-md-end align-items-center gap-2">
+            {{if .AuthenticatedUser}}
+                {{if eq .List.UserID .AuthenticatedUser.ID}}
+                    <button class="btn btn-outline-dark btn-sm rounded-1 fw-bold px-3">
+                        <i class="bi bi-pencil-square me-1"></i> Edit List
+                    </button>
+                {{else}}
+                    <form action="{{if .IsFollowing}}/unfollow{{else}}/follow{{end}}" method="POST" class="m-0">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <input type="hidden" name="target_id" value="{{.List.ID}}">
+                        <input type="hidden" name="target_type" value="list">
+                        <button type="submit" class="btn {{if .IsFollowing}}btn-outline-primary{{else}}btn-primary-accent{{end}} btn-sm rounded-1 fw-bold px-4">
+                            {{if .IsFollowing}}<i class="bi bi-bookmark-dash me-1"></i> Unfollow List{{else}}<i class="bi bi-bookmark-plus me-1"></i> Follow List{{end}}
+                        </button>
+                    </form>
+                {{end}}
+            {{else}}
+                <a href="/login" class="btn btn-primary-accent btn-sm rounded-1 fw-bold px-4">
+                    <i class="bi bi-bookmark-plus me-1"></i> Follow List
+                </a>
+            {{end}}
+        </div>
+    </div>
+
+    {{if .List.Description}}
+    <div class="bg-ultra-light p-3 border-start border-4 border-dark mb-4">
+        <p class="mb-0">{{.List.Description}}</p>
+    </div>
+    {{end}}
+
+    <div class="list-container mt-5">
+        {{if .ListItems}}
+            <div class="row g-3">
+                {{range .ListItems}}
+                <div class="col-12 py-3 border-bottom d-flex gap-4 align-items-center">
+                    {{if $.List.IsRanked}}
+                    <div class="rank-badge display-6 fw-light text-muted opacity-50" style="min-width: 60px;">
+                        #{{.Rank}}
+                    </div>
+                    {{end}}
+                    
+                    <a href="/{{if eq .MediaType "Movie"}}movies{{else}}tv-shows{{end}}/{{.MediaID}}/{{.MediaSlug}}">
+                        <img src="{{if .MediaImg}}{{.MediaImg}}{{else}}/static/img/no-poster.webp{{end}}" 
+                             class="rounded-1 shadow-sm" style="width: 80px; height: 120px; object-fit: cover;" alt="{{.MediaName}}">
+                    </a>
+
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1">
+                            <a href="/{{if eq .MediaType "Movie"}}movies{{else}}tv-shows{{end}}/{{.MediaID}}/{{.MediaSlug}}" class="text-decoration-none text-dark">
+                                {{.MediaName}}
+                            </a>
+                        </h4>
+                        {{if .Note}}
+                            <p class="text-muted small mb-0 mt-2 fst-italic">"{{.Note}}"</p>
+                        {{end}}
+                    </div>
+
+                    {{if $.AuthenticatedUser}}
+                        {{if eq $.List.UserID $.AuthenticatedUser.ID}}
+                        <form action="/list/remove-item" method="POST" class="ms-auto">
+                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
+                            <input type="hidden" name="list_id" value="{{$.List.ID}}">
+                            <input type="hidden" name="media_id" value="{{.MediaID}}">
+                            <button type="submit" class="btn btn-outline-danger btn-sm border-0" title="Remove from list">
+                                <i class="bi bi-trash3"></i>
+                            </button>
+                        </form>
+                        {{end}}
+                    {{end}}
+                </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="text-center py-5 border-2 rounded-2 bg-light">
+                <i class="bi bi-inbox display-4 text-muted opacity-25"></i>
+                <p class="text-muted mt-3">This list is currently empty.</p>
+                <a href="/search" class="btn btn-sm btn-outline-primary">Browse movies to add</a>
+            </div>
+        {{end}}
+    </div>
+</div>
+{{end}}

@@ -70,5 +70,6 @@ func (app *application) adminDashboardView(w http.ResponseWriter, r *http.Reques
 	data.UserCount = userCount
 	data.MediaCount = mediaCount
 
-	app.render(w, http.StatusOK, "admin.html", data)
+	app.render(w, r, http.StatusOK, "admin.html", data)
 }
+

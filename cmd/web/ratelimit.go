@@ -92,3 +92,4 @@ func authRateLimit(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(w, r)
 	}
 }
+

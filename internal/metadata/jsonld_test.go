@@ -2,7 +2,7 @@ package metadata
 
 import (
 	"encoding/json"
-	"movieweb/internal/models"
+	"filmgap/internal/models"
 	"strings"
 	"testing"
 )
@@ -159,7 +159,7 @@ func TestGeneratePersonJSONLD(t *testing.T) {
 				Slug:       "christopher-nolan",
 				Image:      "https://example.com/nolan.jpg",
 				Biography:  "Acclaimed director...",
-				Birthday:   "1970-07-30",
+				BirthDate:  "1970-07-30",
 				BirthPlace: "London, England",
 			},
 			wantErr: false,
@@ -195,3 +195,4 @@ func TestGeneratePersonJSONLD(t *testing.T) {
 		})
 	}
 }
+

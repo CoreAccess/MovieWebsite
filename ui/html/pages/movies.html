@@ -1,163 +1,359 @@
 {{define "title"}}Movie Details{{end}}
 
 {{define "main"}}
+<div class="ref-page">
+    <main class="ref-shell">
+        <div class="ref-grid">
+            <aside>
+                <img src="{{if .MovieDetail.Movie.Image}}{{.MovieDetail.Movie.Image}}{{else}}https://placehold.co/500x750/EEE/999?text=No+Poster{{end}}" alt="{{.MovieDetail.Movie.Name}}" class="ref-photo" fetchpriority="high">
 
-    <!-- Content Window -->
-            <div class="col-lg-12">
-                <main>
-                    
-                    <!-- Hero Movie Details (Clean Block style instead of full backdrop) -->
-                    <section class="mb-5">
-            <div class="row gx-5 align-items-start">
-                
-                <!-- Poster Column -->
-                <div class="col-lg-3 col-md-4 mb-4 mb-md-0 position-relative">
-                    <div class="media-poster-container shadow-lg" style="aspect-ratio: 2/3; border-radius: 4px;">
-                        <img src="{{.MovieDetail.Movie.Image}}" alt="{{.MovieDetail.Movie.Name}}" class="w-100 h-100 object-fit-cover">
-                    </div>
-                    
-                    <!-- Stream/Watch Option -->
-                    <div class="d-grid mt-4">
-                        <button class="btn btn-primary-accent rounded-1 py-3 fw-bold shadow-sm d-flex align-items-center justify-content-center">
-                            <i class="bi bi-play-fill fs-4 me-2"></i> Watch Trailer
+                <div class="ref-action-stack">
+                    <form action="/watchlist/toggle" method="POST" class="watchlist-form">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <input type="hidden" name="media_type" value="Movie">
+                        <input type="hidden" name="media_id" value="{{.MovieDetail.Movie.ID}}">
+                        <button type="submit" class="btn ref-btn-primary w-100 fw-semibold">
+                            {{if index .WatchlistMap .MovieDetail.Movie.ID}}
+                                <i class="bi bi-bookmark-check-fill me-2"></i>On Watchlist
+                            {{else}}
+                                <i class="bi bi-bookmark-plus me-2"></i>Add To Watchlist
+                            {{end}}
                         </button>
-                    </div>
-                    <div class="d-flex flex-wrap gap-2 mt-4">
-                        <form action="/watchlist/toggle" method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                            <input type="hidden" name="media_type" value="movie">
-                            <input type="hidden" name="media_id" value="{{.MovieDetail.Movie.ID}}">
-                            <button type="submit" class="btn btn-primary-accent rounded-1 fw-bold shadow-sm px-4">
-                                <i class="bi bi-bookmark-plus me-2"></i> Watchlist
-                            </button>
-                        </form>
-                        <button class="btn btn-outline-light rounded-1 fw-bold px-4" disabled><i class="bi bi-star me-2"></i> Rate</button>
-                        <button class="btn btn-outline-light rounded-1 fw-bold px-3" disabled aria-label="Share movie"><i class="bi bi-share"></i></button>
-                    </div>
+                    </form>
+                    <button class="btn ref-btn-muted w-100 fw-semibold"
+                            data-bs-toggle="modal"
+                            data-bs-target="#interactionModal"
+                            data-media-id="{{.MovieDetail.Movie.ID}}"
+                            data-media-type="Movie"
+                            data-media-name="{{.MovieDetail.Movie.Name}}">
+                        <i class="bi bi-pencil-square me-2"></i>Rate Or Review
+                    </button>
                 </div>
 
-                <!-- Info Column -->
-                <div class="col-lg-9 col-md-8">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 border-bottom border-subtle pb-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <h1 class="display-5 fw-black text-dark mb-0" style="letter-spacing: -1px;">{{.MovieDetail.Movie.Name}}</h1>
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Quick Facts</h2>
+                    <dl class="ref-facts">
+                        <div>
+                            <dt>Release Date</dt>
+                            <dd>{{if .MovieDetail.Movie.DatePublished}}{{formatDate .MovieDetail.Movie.DatePublished}}{{else}}Unknown{{end}}</dd>
                         </div>
-                        <div class="d-flex align-items-center gap-4 mt-3 mt-md-0">
-                            <!-- StreamLine Rating -->
-                            <div class="text-center">
-                                <div class="text-muted text-uppercase small fw-bold mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">Rating</div>
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <i class="bi bi-star-fill text-warning fs-4 me-2"></i>
-                                    <span class="fs-4 fw-bold text-dark">{{printf "%.1f" .MovieDetail.Movie.AggregateRating}}</span><span class="text-muted small">/10</span>
+                        <div>
+                            <dt>Runtime</dt>
+                            <dd>{{if .MovieDetail.Movie.Duration}}{{.MovieDetail.Movie.Duration}} minutes{{else}}Unknown{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Certification</dt>
+                            <dd>{{if .MovieDetail.Movie.ContentRating}}{{.MovieDetail.Movie.ContentRating}}{{else}}Unrated{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Country</dt>
+                            <dd>{{if .MovieDetail.Movie.CountryCode}}{{.MovieDetail.Movie.CountryCode}}{{else}}Unknown{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Genres</dt>
+                            <dd>
+                                {{range $index, $genre := .MovieDetail.Genres}}
+                                    {{if $index}}, {{end}}{{$genre.Name}}
+                                {{else}}
+                                    Unclassified
+                                {{end}}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Cast & Crew</h2>
+                    <div class="ref-box-list">
+                        {{range $index, $director := .MovieDetail.Directors}}
+                            {{if lt $index 2}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $director.Image}}{{$director.Image}}{{else}}https://placehold.co/80x80/EEE/999?text=Photo{{end}}" alt="{{$director.Name}}" class="ref-box-avatar" loading="lazy">
+                                <div>
+                                    <a href="/people/{{$director.ID}}/{{$director.Slug}}" class="ref-box-link">{{$director.Name}}</a>
+                                    <div class="ref-note">Director</div>
                                 </div>
                             </div>
-                            <!-- Popularity -->
-                            <div class="text-center d-none d-sm-block">
-                                <div class="text-muted text-uppercase small fw-bold mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">Popularity</div>
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <i class="bi bi-graph-up-arrow text-success fs-5 me-2"></i>
-                                    <span class="fs-5 fw-bold text-dark">#1</span>
+                            {{end}}
+                        {{end}}
+                        {{range $index, $cast := .MovieDetail.Cast}}
+                            {{if lt $index 3}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $cast.Person.Image}}{{$cast.Person.Image}}{{else}}https://placehold.co/80x80/EEE/999?text=Photo{{end}}" alt="{{$cast.Person.Name}}" class="ref-box-avatar" loading="lazy">
+                                <div>
+                                    <a href="/people/{{$cast.Person.ID}}/{{$cast.Person.Slug}}" class="ref-box-link">{{$cast.Person.Name}}</a>
+                                    <div class="ref-note">{{if $cast.Character.Name}}{{$cast.Character.Name}}{{else}}Cast{{end}}</div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-
-                    <!-- Metadata -->
-                    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center text-muted small fw-medium">
-                        <span class="badge bg-dark text-white rounded-1 px-2 py-1">{{if .MovieDetail.Movie.ContentRating}}{{.MovieDetail.Movie.ContentRating}}{{else}}Not Rated{{end}}</span>
-                        <span class="d-flex align-items-center"><i class="bi bi-calendar3 me-1"></i> {{.MovieDetail.Movie.DatePublished}}</span>
-                        <span>•</span>
-                        <span class="d-flex align-items-center"><i class="bi bi-clock me-1"></i> {{if .MovieDetail.Movie.Duration}}{{.MovieDetail.Movie.Duration}} min{{else}}N/A{{end}}</span>
-                    </div>
-
-                    <!-- Director / Writers -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-6 col-sm-4 col-md-3">
-                            <span class="text-muted small fw-medium d-block">Director</span>
-                            {{range $index, $director := .MovieDetail.Directors}}
-                            {{if $index}}, {{end}}
-                            <a href="/people/{{$director.ID}}/{{$director.Slug}}" class="fw-bold text-primary-accent text-decoration-none hover-dark">{{$director.Name}}</a>
-                            {{else}}
-                            <span class="text-muted small">Not Available</span>
                             {{end}}
-                        </div>
-                        <div class="col-6 col-sm-8 col-md-9">
-                            <span class="text-muted small fw-medium d-block">Writers</span>
-                            {{range $index, $writer := .MovieDetail.Writers}}
-                            {{if $index}}, {{end}}
-                            <a href="/people/{{$writer.ID}}/{{$writer.Slug}}" class="fw-bold text-primary-accent text-decoration-none hover-dark">{{$writer.Name}}</a>
-                            {{else}}
-                            <span class="text-muted small">Not Available</span>
-                            {{end}}
-                        </div>
+                        {{end}}
                     </div>
+                </section>
 
-                    <!-- Production & Financials -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-6 col-sm-4 col-md-3">
-                            <span class="text-muted small fw-medium d-block">Language</span>
-                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.LanguageCode}}{{.MovieDetail.Movie.LanguageCode}}{{else}}en{{end}}</span>
+                <section class="ref-box">
+                    <h2 class="ref-box-title">FilmGap Stats</h2>
+                    <dl class="ref-facts">
+                        <div>
+                            <dt>Rating</dt>
+                            <dd>{{printf "%.1f" .MovieDetail.Movie.AggregateRating}}/10</dd>
                         </div>
-                        <div class="col-6 col-sm-4 col-md-3">
-                            <span class="text-muted small fw-medium d-block">Budget</span>
-                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.Budget}}{{.MovieDetail.Movie.Budget}}{{else}}Unknown{{end}}</span>
+                        <div>
+                            <dt>Reviews</dt>
+                            <dd>{{.MovieDetail.Movie.ReviewCount}}</dd>
                         </div>
-                        <div class="col-6 col-sm-4 col-md-3">
-                            <span class="text-muted small fw-medium d-block">Box Office</span>
-                            <span class="fw-bold text-dark">{{if .MovieDetail.Movie.BoxOffice}}{{.MovieDetail.Movie.BoxOffice}}{{else}}Unknown{{end}}</span>
+                        <div>
+                            <dt>Rating Count</dt>
+                            <dd>{{.MovieDetail.Movie.RatingCount}}</dd>
                         </div>
-                    </div>
+                    </dl>
+                </section>
+            </aside>
 
-                    <!-- Synopsis -->
-                    <h5 class="fw-bold text-dark mb-2">Overview</h5>
-                    <p class="text-body mb-4" style="font-size: 1.05rem; line-height: 1.6;">
-                        {{.MovieDetail.Movie.Description}}
+            <section>
+                <header class="ref-main-header">
+                    <p class="ref-kicker">Movie</p>
+                    <h1 class="ref-title">{{.MovieDetail.Movie.Name}}</h1>
+                    <p class="ref-subtitle">
+                        {{if .MovieDetail.Movie.Tagline}}
+                            {{.MovieDetail.Movie.Tagline}}
+                        {{else if .MovieDetail.Movie.Subtitle}}
+                            {{.MovieDetail.Movie.Subtitle}}
+                        {{else if .MovieDetail.Movie.Description}}
+                            {{truncateWords .MovieDetail.Movie.Description 28}}
+                        {{else}}
+                            FilmGap profile built from the movie metadata stored in our database.
+                        {{end}}
                     </p>
+                    <div class="ref-header-meta">
+                        <span class="ref-header-meta-item"><strong>{{printf "%.1f" .MovieDetail.Movie.AggregateRating}}/10</strong> rating</span>
+                        <span class="ref-header-meta-item">{{if .MovieDetail.Movie.DatePublished}}{{yearFromDate .MovieDetail.Movie.DatePublished}}{{else}}Upcoming{{end}}</span>
+                        {{if .MovieDetail.Movie.Duration}}<span class="ref-header-meta-item">{{.MovieDetail.Movie.Duration}} min</span>{{end}}
+                        {{if .MovieDetail.Movie.ContentRating}}<span class="ref-header-meta-item">{{.MovieDetail.Movie.ContentRating}}</span>{{end}}
+                        <span class="ref-header-meta-item">{{if .MovieDetail.Movie.IsFamilyFriendly}}Family Friendly{{else}}Mature Audience{{end}}</span>
+                        {{range $index, $genre := .MovieDetail.Genres}}{{if lt $index 3}}<span class="ref-header-meta-item">{{$genre.Name}}</span>{{end}}{{end}}
+                    </div>
+                </header>
 
-                    <!-- Nav Pills for content sections -->
-                    <ul class="nav nav-pills mb-4 border-bottom border-subtle pb-2 gap-2" id="movieTab" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active bg-subtle-primary text-primary-accent fw-bold rounded-1 border-0 shadow-sm" id="cast-tab" data-bs-toggle="pill" data-bs-target="#cast" type="button" role="tab" aria-selected="true" style="transition: all 0.2s;">Top Cast</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link text-muted fw-medium rounded-1 border-0" id="media-tab" data-bs-toggle="pill" data-bs-target="#media" type="button" role="tab" aria-selected="false" style="transition: all 0.2s;">Media & Trailers</button>
-                        </li>
-                    </ul>
+                <ul class="nav nav-pills ref-tabs" id="movieTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="movie-overview-tab" data-bs-toggle="pill" data-bs-target="#movie-overview" type="button" role="tab" aria-selected="true">Overview</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="movie-watch-tab" data-bs-toggle="pill" data-bs-target="#movie-watch" type="button" role="tab" aria-selected="false">Watch</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="movie-cast-tab" data-bs-toggle="pill" data-bs-target="#movie-cast" type="button" role="tab" aria-selected="false">Cast</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="movie-details-tab" data-bs-toggle="pill" data-bs-target="#movie-details" type="button" role="tab" aria-selected="false">Details</button>
+                    </li>
+                </ul>
 
-                    <!-- Tab Content -->
-                    <div class="tab-content" id="movieTabContent">
-                        <!-- Cast Panel -->
-                        <div class="tab-pane fade show active" id="cast" role="tabpanel">
-                            <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3">
-                                {{range .MovieDetail.Cast}}
-                                <div class="col">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <img src="{{.Person.Image}}" alt="{{.Person.Name}}" class="rounded-circle object-fit-cover shadow-sm border border-2 border-white" style="width: 50px; height: 50px;">
+                <div class="tab-content ref-tab-content" aria-live="polite">
+                    <div class="tab-pane fade show active" id="movie-overview" role="tabpanel" aria-labelledby="movie-overview-tab">
+                        <section class="ref-panel ref-panel--flush">
+                            <div class="ref-overview-grid">
+                                <div class="ref-overview-media">
+                                    <img src="{{if .MovieDetail.Movie.Image}}{{.MovieDetail.Movie.Image}}{{else}}https://placehold.co/720x405/EEE/999?text=Poster{{end}}" alt="{{.MovieDetail.Movie.Name}}" loading="lazy">
+                                </div>
+                                <div class="ref-overview-aside">
+                                    {{if .MovieDetail.Movie.Tagline}}<p class="ref-lead">{{.MovieDetail.Movie.Tagline}}</p>{{end}}
+                                    <p class="ref-copy">{{if .MovieDetail.Movie.Description}}{{truncateWords .MovieDetail.Movie.Description 72}}{{else}}No storyline is currently stored for this movie.{{end}}</p>
+
+                                    <div class="ref-stat-grid">
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Rating</span>
+                                            <span class="ref-stat-value">{{printf "%.1f" .MovieDetail.Movie.AggregateRating}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Reviews</span>
+                                            <span class="ref-stat-value">{{.MovieDetail.Movie.ReviewCount}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Ratings</span>
+                                            <span class="ref-stat-value">{{.MovieDetail.Movie.RatingCount}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Audience</span>
+                                            <span class="ref-stat-value">{{if .MovieDetail.Movie.IsFamilyFriendly}}General{{else}}Mature{{end}}</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="ref-fact-pairs">
                                         <div>
-                                            <a href="/people/{{.Person.ID}}/{{.Person.Slug}}" class="fw-bold text-dark text-decoration-none d-block lh-1 hover-primary mb-1" style="font-size: 0.9rem;">{{.Person.Name}}</a>
-                                            <span class="text-muted small d-block lh-1" style="font-size: 0.75rem;">{{.Character.Name}}</span>
+                                            <span class="ref-fact-label">Director</span>
+                                            <span class="ref-fact-value">{{range $index, $director := .MovieDetail.Directors}}{{if $index}}, {{end}}{{$director.Name}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Writers</span>
+                                            <span class="ref-fact-value">{{range $index, $writer := .MovieDetail.Writers}}{{if $index}}, {{end}}{{$writer.Name}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Release</span>
+                                            <span class="ref-fact-value">{{if .MovieDetail.Movie.DatePublished}}{{formatDate .MovieDetail.Movie.DatePublished}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Language</span>
+                                            <span class="ref-fact-value">{{if .MovieDetail.Movie.LanguageCode}}{{.MovieDetail.Movie.LanguageCode}}{{else}}Unknown{{end}}</span>
                                         </div>
                                     </div>
                                 </div>
-                                {{else}}
-                                <div class="col-12"><p class="text-muted small">No cast information available.</p></div>
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Top Billed Cast</h2>
+                            <div class="ref-card-row">
+                                {{range $index, $cast := .MovieDetail.Cast}}
+                                    {{if lt $index 5}}
+                                    <a href="/people/{{$cast.Person.ID}}/{{$cast.Person.Slug}}" class="ref-card">
+                                        <div class="ref-card-thumb ref-card-thumb--person"><img src="{{if $cast.Person.Image}}{{$cast.Person.Image}}{{else}}https://placehold.co/300x400/EEE/999?text=Photo{{end}}" alt="{{$cast.Person.Name}}" loading="lazy"></div>
+                                        <span class="ref-card-title">{{$cast.Person.Name}}</span>
+                                        <span class="ref-card-meta">{{if $cast.Character.Name}}{{$cast.Character.Name}}{{else}}Cast{{end}}</span>
+                                    </a>
+                                    {{end}}
                                 {{end}}
                             </div>
-                        </div>
+                        </section>
 
-                        <!-- Media Panel placeholder details -->
-                        <div class="tab-pane fade" id="media" role="tabpanel">
-                            <p class="text-muted small">Media galleries go here.</p>
-                        </div>
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Production Details</h2>
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Director</div>
+                                    <div><span class="ref-credit-role">{{range $index, $director := .MovieDetail.Directors}}{{if $index}}, {{end}}{{$director.Name}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Writers</div>
+                                    <div><span class="ref-credit-role">{{range $index, $writer := .MovieDetail.Writers}}{{if $index}}, {{end}}{{$writer.Name}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Genres</div>
+                                    <div><span class="ref-credit-role">{{range $index, $genre := .MovieDetail.Genres}}{{if $index}}, {{end}}{{$genre.Name}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Budget</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Budget}}{{.MovieDetail.Movie.Budget}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Box Office</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.BoxOffice}}{{.MovieDetail.Movie.BoxOffice}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Did You Know?</h2>
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Audience</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.IsFamilyFriendly}}This title is marked as family friendly in our database.{{else}}This title is marked for a more mature audience in our database.{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Engagement</div>
+                                    <div><span class="ref-credit-role">{{.MovieDetail.Movie.ReviewCount}} reviews and {{.MovieDetail.Movie.RatingCount}} ratings currently power the FilmGap score.</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Tagline</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Tagline}}{{.MovieDetail.Movie.Tagline}}{{else}}This movie does not yet have a tagline stored in our database.{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
 
+                    <div class="tab-pane fade" id="movie-watch" role="tabpanel" aria-labelledby="movie-watch-tab">
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Where To Watch</h2>
+                            {{if .WatchProviderGroups}}
+                                {{range .WatchProviderGroups}}
+                                <section class="ref-panel">
+                                    <h2 class="ref-panel-title">{{.Label}}</h2>
+                                    <div class="ref-provider-grid">
+                                        {{range .Providers}}
+                                        <a href="{{.DeepLinkURL}}" target="_blank" rel="noopener noreferrer nofollow" class="ref-provider-card">
+                                            {{if .LogoURL}}
+                                            <img src="{{.LogoURL}}" alt="{{.ProviderName}} logo" class="ref-provider-logo" loading="lazy">
+                                            {{else}}
+                                            <div class="ref-provider-logo d-flex align-items-center justify-content-center">TV</div>
+                                            {{end}}
+                                            <div>
+                                                <span class="ref-provider-name">{{.ProviderName}}</span>
+                                                <span class="ref-provider-meta">Open service details</span>
+                                            </div>
+                                        </a>
+                                        {{end}}
+                                    </div>
+                                </section>
+                                {{end}}
+                            {{else}}
+                                <p class="ref-copy">We do not have provider data for this movie yet.</p>
+                            {{end}}
+                        </section>
+                    </div>
+
+                    <div class="tab-pane fade" id="movie-cast" role="tabpanel" aria-labelledby="movie-cast-tab">
+                        <section class="ref-panel">
+                            <div class="ref-card-row">
+                                {{range .MovieDetail.Cast}}
+                                <a href="/people/{{.Person.ID}}/{{.Person.Slug}}" class="ref-card">
+                                    <div class="ref-card-thumb ref-card-thumb--person"><img src="{{if .Person.Image}}{{.Person.Image}}{{else}}https://placehold.co/300x400/EEE/999?text=Photo{{end}}" alt="{{.Person.Name}}" loading="lazy"></div>
+                                    <span class="ref-card-title">{{.Person.Name}}</span>
+                                    <span class="ref-card-meta">{{if .Character.Name}}{{.Character.Name}}{{else}}Cast{{end}}</span>
+                                </a>
+                                {{end}}
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="tab-pane fade" id="movie-details" role="tabpanel" aria-labelledby="movie-details-tab">
+                        <section class="ref-panel">
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Release Date</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.DatePublished}}{{formatDate .MovieDetail.Movie.DatePublished}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Runtime</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Duration}}{{.MovieDetail.Movie.Duration}} minutes{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Certification</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.ContentRating}}{{.MovieDetail.Movie.ContentRating}}{{else}}Unrated{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Language</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.LanguageCode}}{{.MovieDetail.Movie.LanguageCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Country</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.CountryCode}}{{.MovieDetail.Movie.CountryCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Genres</div>
+                                    <div><span class="ref-credit-role">{{range $index, $genre := .MovieDetail.Genres}}{{if $index}}, {{end}}{{$genre.Name}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Tagline</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Tagline}}{{.MovieDetail.Movie.Tagline}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Subtitle</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Subtitle}}{{.MovieDetail.Movie.Subtitle}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Budget</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.Budget}}{{.MovieDetail.Movie.Budget}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Box Office</div>
+                                    <div><span class="ref-credit-role">{{if .MovieDetail.Movie.BoxOffice}}{{.MovieDetail.Movie.BoxOffice}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
                 </div>
-            </div>
-        </section>
-
-
-                </main>
-            </div>
-
+            </section>
+        </div>
+    </main>
+</div>
 {{end}}

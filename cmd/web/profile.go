@@ -1,9 +1,8 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
+	"strconv"
 )
 
 // profileView renders the user dashboard
@@ -12,13 +11,54 @@ func (app *application) profileView(w http.ResponseWriter, r *http.Request) {
 	data := app.getTemplateData("My Profile", r)
 	user := app.getUser(r)
 	if user != nil {
+		followers, following, err := app.Service.GetFollowCounts(user.ID)
+		if err == nil {
+			user.FollowerCount = followers
+			user.FollowingCount = following
+		}
+		data.AuthenticatedUser = user
+
 		watchlists, err := app.Service.GetUserWatchlists(user.ID)
 		if err == nil {
 			data.Watchlists = watchlists
 		}
 	}
 
-	app.render(w, http.StatusOK, "profile.html", data)
+	app.render(w, r, http.StatusOK, "profile.html", data)
+}
+
+func (app *application) publicProfileView(w http.ResponseWriter, r *http.Request) {
+	idStr := r.PathValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		app.notFound(w)
+		return
+	}
+
+	targetUser, err := app.Service.GetUserByID(id)
+	if err != nil {
+		app.notFound(w)
+		return
+	}
+
+	data := app.getTemplateData(targetUser.Username+"'s Profile", r)
+	data.ProfileUser = targetUser
+
+	// Fetch follow counts
+	followers, following, err := app.Service.GetFollowCounts(id)
+	if err == nil {
+		data.ProfileUser.FollowerCount = followers
+		data.ProfileUser.FollowingCount = following
+	}
+
+	// If authenticated, check follow status
+	currUser := app.getUser(r)
+	if currUser != nil {
+		isFollowing, _ := app.Service.IsFollowingUser(currUser.ID, id)
+		data.IsFollowing = isFollowing
+	}
+
+	app.render(w, r, http.StatusOK, "profile.html", data)
 }
 
 // profileEditPost handles updating user settings
@@ -41,7 +81,7 @@ func (app *application) profileEditPost(w http.ResponseWriter, r *http.Request) 
 	// Update the database
 	err = app.Service.UpdateUserProfile(user.ID, email, avatar)
 	if err != nil {
-		log.Println("Error updating profile:", err)
+		app.logger.Error("error updating profile", "error", err, "userID", user.ID)
 		http.Redirect(w, r, "/profile?error=update_failed", http.StatusSeeOther)
 		return
 	}
@@ -50,46 +90,5 @@ func (app *application) profileEditPost(w http.ResponseWriter, r *http.Request) 
 	http.Redirect(w, r, "/profile?success=1", http.StatusSeeOther)
 }
 
-// toggleWatchlistPost handles adding logic
-func (app *application) toggleWatchlistPost(w http.ResponseWriter, r *http.Request) {
-	user := app.getUser(r)
-	if user == nil {
-		http.Redirect(w, r, "/login", http.StatusSeeOther)
-		return
-	}
 
-	err := r.ParseForm()
-	if err != nil || r.PostForm.Get("media_id") == "" || r.PostForm.Get("media_type") == "" {
-		http.Error(w, "Bad Request", http.StatusBadRequest)
-		return
-	}
 
-	// Simplification: Auto-create a default watchlist if the user has none
-	watchlists, err := app.Service.GetUserWatchlists(user.ID)
-	var watchlistID int
-	if err != nil || len(watchlists) == 0 {
-		app.Service.CreateWatchlist(user.ID, "My Watchlist", "Stuff I want to watch")
-		// Fetch again to get the new ID
-		watchlists, _ = app.Service.GetUserWatchlists(user.ID)
-	}
-	if len(watchlists) > 0 {
-		watchlistID = watchlists[0].ID
-	} else {
-		http.Error(w, "Could not create or find watchlist", http.StatusInternalServerError)
-		return
-	}
-
-	mediaIDStr := r.PostForm.Get("media_id")
-	var mediaID int
-	fmt.Sscanf(mediaIDStr, "%d", &mediaID)
-	mediaType := r.PostForm.Get("media_type")
-
-	err = app.Service.AddToWatchlist(watchlistID, mediaType, mediaID)
-	if err != nil {
-		log.Println("Error adding to watchlist:", err)
-	}
-
-	// Redirect back where they came from
-	referer := getSafeReferer(r, "/profile")
-	http.Redirect(w, r, referer, http.StatusSeeOther)
-}

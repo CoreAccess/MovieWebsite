@@ -5,16 +5,15 @@ import (
 	"fmt"
 	"html/template"
 	"log/slog"
-
-	"movieweb/internal/service"
-	"log"
 	"net/http"
 	"net/url"
 	"path/filepath"
 	"runtime/debug"
 	"strings"
+	"time"
 
-	"movieweb/internal/models"
+	"filmgap/internal/models"
+	"filmgap/internal/service"
 
 	"github.com/justinas/nosurf"
 )
@@ -23,19 +22,18 @@ import (
 type application struct {
 	Service *service.AppService
 
-	errorLog      *log.Logger
-	infoLog       *log.Logger
 	logger        *slog.Logger
 	templateCache map[string]*template.Template
 }
 
 type templateData struct {
-	JSONLD          string // Raw JSON-LD payload to be injected into the <head> of base.tmpl
-	CurrentYear     int
-	Flash           string
-	SiteName        string
+	JSONLD      string // Raw JSON-LD payload to be injected into the <head> of base.tmpl
+	CurrentYear int
+	Flash       string
+	SiteName    string
 
 	Title             string
+	Hero              any
 	Movies            any
 	Shows             any
 	People            any
@@ -50,8 +48,13 @@ type templateData struct {
 	SearchQuery       string
 	ResultCount       int
 	Reviews           []any
+	Lists             []models.List
+	List              models.List
+	ListItems         []models.ListItem
 	AuthenticatedUser *models.User
 	CSRFToken         string
+	ProfileUser       models.User
+	IsFollowing       bool
 	Watchlists        []models.Watchlist
 	EntityType        string
 	EntityID          int
@@ -60,6 +63,21 @@ type templateData struct {
 	Sort              string
 	Next              string
 	Filter            string
+
+	// Homepage Expansion Fields
+	Stats               models.HomepageStats
+	Trending            []models.MediaSummary
+	Activity            []models.Activity
+	PopularLists        []models.List
+	Franchise           models.Franchise
+	BlogPosts           []models.BlogPost
+	Photos              []models.Photo
+	Birthdays           []models.Person
+	FanFavorites        []models.MediaSummary
+	BoxOffice           []models.MediaSummary
+	PopularCelebs       []models.Person
+	WatchlistMap        map[int]bool
+	WatchProviderGroups []models.WatchProviderGroup
 }
 
 // newTemplateCache initializes an in-memory cache of parsed HTML templates.
@@ -75,6 +93,7 @@ func newTemplateCache() (map[string]*template.Template, error) {
 		"trimSpace": strings.TrimSpace,
 		"trimLeft":  strings.TrimLeft,
 		"trimRight": strings.TrimRight,
+		"lower":     strings.ToLower,
 		"firstGenre": func(genreJSON string) string {
 			genreJSON = strings.TrimSpace(genreJSON)
 			if len(genreJSON) == 0 || genreJSON == "[]" {
@@ -87,6 +106,49 @@ func newTemplateCache() (map[string]*template.Template, error) {
 				return ""
 			}
 			return strings.Trim(strings.TrimSpace(parts[0]), `"`)
+		},
+		"formatRating": func(rating float64) string {
+			return fmt.Sprintf("%.1f", rating)
+		},
+		"formatDate": func(dateStr string) string {
+			parsed, err := time.Parse("2006-01-02", dateStr)
+			if err != nil {
+				return dateStr
+			}
+			return parsed.Format("January 2, 2006")
+		},
+		"yearFromDate": func(dateStr string) string {
+			dateStr = strings.TrimSpace(dateStr)
+			if len(dateStr) >= 4 {
+				return dateStr[:4]
+			}
+			return ""
+		},
+		"truncateWords": func(text string, limit int) string {
+			words := strings.Fields(strings.TrimSpace(text))
+			if len(words) == 0 {
+				return ""
+			}
+			if limit <= 0 || len(words) <= limit {
+				return strings.Join(words, " ")
+			}
+			return strings.Join(words[:limit], " ") + "..."
+		},
+		"humanDate": func(t time.Time) string {
+			if t.IsZero() {
+				return "Unknown"
+			}
+			return t.Format("Jan 02, 2006")
+		},
+		"seq": func(start, end int) []int {
+			var result []int
+			for i := start; i <= end; i++ {
+				result = append(result, i)
+			}
+			return result
+		},
+		"safeHTML": func(s string) template.HTML {
+			return template.HTML(s)
 		},
 	}
 
@@ -105,6 +167,7 @@ func newTemplateCache() (map[string]*template.Template, error) {
 			"./ui/html/base.tmpl",
 			"./ui/html/partials/nav.tmpl",
 			"./ui/html/partials/sidebar.tmpl",
+			"./ui/html/partials/interaction_modal.tmpl",
 			page,
 		}
 
@@ -121,10 +184,15 @@ func newTemplateCache() (map[string]*template.Template, error) {
 	return cache, nil
 }
 
-// serverError logs the detailed error and sends a generic 500 Internal Server Error response.
-func (app *application) serverError(w http.ResponseWriter, err error) {
+// serverError logs the error with structured context and sends a generic 500 response.
+func (app *application) serverError(w http.ResponseWriter, r *http.Request, err error) {
 	trace := fmt.Sprintf("%s\n%s", err.Error(), debug.Stack())
-	app.errorLog.Output(2, trace)
+	app.logger.Error("server error",
+		"error", trace,
+		"method", r.Method,
+		"uri", r.URL.RequestURI(),
+		"remote_addr", r.RemoteAddr,
+	)
 	http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 }
 
@@ -146,9 +214,13 @@ func (app *application) getTemplateData(title string, r *http.Request) *template
 
 	var authUser *models.User
 	var csrfToken string
+	var userLists []models.List
 	if r != nil {
 		authUser = app.getUser(r)
 		csrfToken = nosurf.Token(r)
+		if authUser != nil {
+			userLists, _ = app.Service.GetListsByUserID(authUser.ID)
+		}
 	}
 
 	return &templateData{
@@ -158,15 +230,16 @@ func (app *application) getTemplateData(title string, r *http.Request) *template
 		Users:             users,
 		AuthenticatedUser: authUser,
 		CSRFToken:         csrfToken,
+		Lists:             userLists,
 	}
 }
 
 // render fetches the requested template from the cache, executes it, and writes the output.
-func (app *application) render(w http.ResponseWriter, status int, page string, data *templateData) {
+func (app *application) render(w http.ResponseWriter, r *http.Request, status int, page string, data *templateData) {
 	ts, ok := app.templateCache[page]
 	if !ok {
 		err := fmt.Errorf("the template %s does not exist", page)
-		app.serverError(w, err)
+		app.serverError(w, r, err)
 		return
 	}
 
@@ -176,7 +249,7 @@ func (app *application) render(w http.ResponseWriter, status int, page string, d
 	// Execute the template to the buffer, to catch any execution errors.
 	err := ts.ExecuteTemplate(buf, "base", data)
 	if err != nil {
-		app.serverError(w, err)
+		app.serverError(w, r, err)
 		return
 	}
 
@@ -235,15 +308,27 @@ func getSafeReferer(r *http.Request, fallback string) string {
 	return redirectPath
 }
 
-// Inject JSON-LD Schema.org data for SEO and AI Agent understanding
-
-// Provide the JSON-LD to the template context
+// addDefaultData provides default template context values.
 func (app *application) addDefaultData(td *templateData, r *http.Request) *templateData {
 	if td == nil {
 		td = &templateData{}
 	}
 	td.CurrentYear = 2026
 	td.Flash = "Notice: Application Architecture is being upgraded to Enterprise standards"
-	td.SiteName = "MovieWeb Schema.org Optimized"
+	td.SiteName = "filmgap Schema.org Optimized"
 	return td
+}
+
+func (app *application) getWatchlistMap(userID int) map[int]bool {
+	watchlistMap := make(map[int]bool)
+	movies, shows, err := app.Service.Repo.GetUserWatchlist(userID)
+	if err == nil {
+		for _, m := range movies {
+			watchlistMap[m.ID] = true
+		}
+		for _, s := range shows {
+			watchlistMap[s.ID] = true
+		}
+	}
+	return watchlistMap
 }

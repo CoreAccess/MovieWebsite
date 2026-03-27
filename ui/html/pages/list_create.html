@@ -1,0 +1,50 @@
+{{define "title"}}Create New List{{end}}
+
+{{define "main"}}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <h1 class="mb-4">Create New Collection</h1>
+            
+            <form action="/list/create" method="POST" class="bg-white p-4 border shadow-sm rounded-1">
+                <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                
+                <div class="mb-3">
+                    <label for="name" class="form-label fw-bold">List Name</label>
+                    <input type="text" class="form-control rounded-1" id="name" name="name" required placeholder="e.g. My Favorite Sci-Fi Movies">
+                </div>
+
+                <div class="mb-3">
+                    <label for="description" class="form-label fw-bold">Description (Optional)</label>
+                    <textarea class="form-control rounded-1" id="description" name="description" rows="3" placeholder="Tell us what this list is about..."></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold d-block">Visibility</label>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPublic" value="public" checked>
+                        <label class="form-check-input-label" for="visibilityPublic">Public</label>
+                    </div>
+                    <div class="form-check form-check-inline">
+                        <input class="form-check-input" type="radio" name="visibility" id="visibilityPrivate" value="private">
+                        <label class="form-check-input-label" for="visibilityPrivate">Private (Only you)</label>
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="ranked" name="ranked" value="true">
+                        <label class="form-check-label fw-bold" for="ranked">Ranked List (1, 2, 3...)</label>
+                    </div>
+                    <div id="rankedHelp" class="form-text">Choose this if you want to explicitly order your items.</div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary rounded-1">Create List</button>
+                    <a href="/lists" class="btn btn-link text-muted">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{{end}}

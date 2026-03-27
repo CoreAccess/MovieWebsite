@@ -66,3 +66,4 @@ func TestSlugify(t *testing.T) {
 		})
 	}
 }
+

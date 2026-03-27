@@ -32,5 +32,8 @@ tmp/
 # Jules
 .jules/
 
+# Go Cache
+.gocache/
+
 # Env files
 .env

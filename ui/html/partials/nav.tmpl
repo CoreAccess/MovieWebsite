@@ -1,91 +1,59 @@
 {{define "nav"}}
-<!-- Top Navbar -->
-<nav class="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm py-2" style="z-index: 1050;">
+<div class="container-1600 mx-auto d-flex align-items-center h-100 w-100">
+    
+    <!-- Left: Logo -->
+    <a class="navbar-brand d-flex align-items-center fw-bold fs-4 text-dark text-decoration-none me-4" href="/">
+        <span>Film Gap</span>
+    </a>
 
-    <!-- Mobile Header (Visible only on small screens) -->
-    <div class="d-flex d-lg-none justify-content-center align-items-center w-100 px-3 position-relative py-1">
-        <button class="btn btn-link text-dark p-0 text-decoration-none position-absolute start-0 ms-3" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu">
-            <i class="bi bi-list fs-2"></i>
-        </button>
-        <a class="navbar-brand d-flex align-items-center fw-bold fs-4 text-primary-accent m-0 p-0" href="/">
-            <i class="bi bi-play-circle-fill me-2 fs-3 text-primary-accent"></i>
-            <span>FilmChatter</span>
-        </a>
-        <div style="width: 32px;" class="position-absolute end-0"></div>
-    </div>
+    <!-- Center-Left: Nav Links (Full Height) -->
+    <nav class="d-none d-lg-flex h-100 me-auto">
+        <a href="/movies" class="nav-link-custom active">Movies</a>
+        <a href="/tv-shows" class="nav-link-custom">TV Shows</a>
+        <a href="/people" class="nav-link-custom">People</a>
+        <a href="/blog" class="nav-link-custom">Blog</a>
+    </nav>
 
-    <!-- Desktop Header: mirrors the 320px | 1fr page grid -->
-    <div class="collapse navbar-collapse d-lg-flex w-100 align-items-center" id="mainNav">
-        <!-- 
-            Use the same grid as base.tmpl so logo and search bar align
-            with the sidebar column and main content column respectively.
-        -->
-        <div class="w-100 d-none d-lg-grid" style="display: grid !important; grid-template-columns: 320px 1fr; align-items: center;">
-
-            <!-- Left cell: Logo — inset matches sidebar padding (20px col + 16px px-3 = 36px) -->
-            <div style="padding-left: 36px;">
-                <a class="navbar-brand d-flex align-items-center fw-bold fs-4 text-primary-accent m-0 p-0" href="/">
-                    <i class="bi bi-play-circle-fill me-2 fs-3 text-primary-accent"></i>
-                    <span>FilmChatter</span>
-                </a>
-            </div>
-
-            <!-- Right cell: mirrors the col-lg-9 / col-lg-3 homepage split.
-                 Uses CSS grid with 3fr/1fr so search bar = hero banner width,
-                 regardless of auth state (flex collapses empty children). -->
-            <div style="display: grid; grid-template-columns: 3fr 1fr; align-items: center; padding-left: 1.5rem; padding-right: 1.5rem; gap: 1rem;">
-
-                <!-- Search bar occupies col-lg-9 (3fr ≈ 75%) column -->
-                <form class="d-flex w-100" action="/search" method="GET">
-                    <div class="input-group search-group rounded-1 overflow-hidden w-100">
-                        <span class="input-group-text bg-light border-0 text-muted ps-3 pe-1"><i class="bi bi-search"></i></span>
-                        <input type="search" name="q" class="form-control bg-light border-0 shadow-none px-2 py-2" placeholder="Search for movies, tv shows, people..." aria-label="Search">
-                    </div>
-                </form>
-
-                <!-- Nav icons occupy col-lg-3 (1fr ≈ 25%) column — sit above right sidebar -->
-                <div class="d-flex align-items-center justify-content-end">
-                    <ul class="navbar-nav mb-0 align-items-center fw-medium flex-row gap-3">
-                        {{if .AuthenticatedUser}}
-                        <li class="nav-item">
-                            <a class="nav-link text-body position-relative p-2 px-0" href="/search" title="Notifications">
-                                <i class="bi bi-bell fs-5"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <div class="dropdown">
-                                <a class="nav-link dropdown-toggle text-dark fw-bold d-flex align-items-center gap-2 px-0" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <img src="{{if .AuthenticatedUser.Avatar}}{{.AuthenticatedUser.Avatar}}{{else}}https://placehold.co/100x100/e2e8f0/64748b?text={{.AuthenticatedUser.Username}}{{end}}" alt="User" class="rounded-circle" width="32" height="32" style="object-fit:cover;">
-                                    <span class="d-none d-md-inline">{{.AuthenticatedUser.Username}}</span>
-                                </a>
-                                <ul class="dropdown-menu dropdown-menu-end border-subtle shadow-sm rounded-1 px-2 py-3 mt-2" style="min-width: 220px;">
-                                    <li class="px-3 pb-2 mb-2 border-bottom border-subtle">
-                                        <p class="mb-0 fw-bold text-dark lh-1">{{.AuthenticatedUser.Username}}</p>
-                                        <small class="text-muted d-block">{{.AuthenticatedUser.Email}}</small>
-                                    </li>
-                                    <li><a class="dropdown-item py-2 fw-medium rounded-1 hover-primary" href="/profile"><i class="bi bi-person me-2 text-muted"></i>My Profile</a></li>
-                                    <li><a class="dropdown-item py-2 fw-medium rounded-1 hover-primary" href="/settings"><i class="bi bi-gear me-2 text-muted"></i>Settings</a></li>
-                                    {{if eq .AuthenticatedUser.Role "admin"}}
-                                    <li><hr class="dropdown-divider opacity-10 my-2"></li>
-                                    <li><a class="dropdown-item py-2 fw-medium rounded-1 hover-primary" href="/admin"><i class="bi bi-shield-lock me-2 text-muted"></i>Admin Dashboard</a></li>
-                                    {{end}}
-                                    <li><hr class="dropdown-divider opacity-10 my-2"></li>
-                                    <li>
-                                        <form action="/logout" method="POST">
-                                            <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
-                                            <button type="submit" class="dropdown-item py-2 fw-medium rounded-1 hover-danger text-danger"><i class="bi bi-box-arrow-right me-2"></i>Sign Out</button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </li>
-                        {{end}}
-                    </ul>
-                </div>
-
-            </div>
-
+    <!-- Center-Right: Search Bar -->
+    <form class="d-none d-md-flex mx-4 flex-grow-1 header-search" action="/search" method="GET">
+        <div class="input-group">
+            <span class="input-group-text bg-light"><i class="bi bi-search text-muted"></i></span>
+            <input type="search" name="q" class="form-control bg-light shadow-none px-2 py-2" placeholder="Search for movies, tv shows, people..." aria-label="Search">
         </div>
+    </form>
+
+    <!-- Right: Auth Buttons -->
+    <div class="d-flex align-items-center gap-3 ms-auto">
+        {{if .AuthenticatedUser}}
+        <a href="/notifications" class="text-dark position-relative hover-lift" title="Notifications">
+            <i class="bi bi-bell fs-5"></i>
+            <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle" style="width: 8px; height: 8px;">
+                <span class="visually-hidden">New alerts</span>
+            </span>
+        </a>
+        <!-- Authenticated Dropdown using existing logic roughly -->
+        <div class="dropdown">
+            <a class="nav-link dropdown-toggle text-dark fw-bold d-flex align-items-center gap-2" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <img src="{{if .AuthenticatedUser.Avatar}}{{.AuthenticatedUser.Avatar}}{{else}}https://placehold.co/100x100/e2e8f0/64748b?text={{.AuthenticatedUser.Username}}{{end}}" alt="User" class="rounded-circle" width="32" height="32" style="object-fit:cover;">
+                <span class="d-none d-md-inline">{{.AuthenticatedUser.Username}}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 mt-2">
+                <li><a class="dropdown-item py-2 fw-medium" href="/profile">My Profile</a></li>
+                <li><a class="dropdown-item py-2 fw-medium" href="/lists">My Lists</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <form action="/logout" method="POST">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <button type="submit" class="dropdown-item py-2 fw-medium text-danger">Sign Out</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+        {{else}}
+        <!-- Guest Auth Buttons -->
+        <a href="/login" class="btn btn-outline-secondary fw-bold border-0 text-dark px-3 hover-lift">Log In</a>
+        <a href="/signup" class="btn btn-primary fw-bold px-4 rounded-1 hover-lift">Sign Up</a>
+        {{end}}
     </div>
-</nav>
+</div>
 {{end}}

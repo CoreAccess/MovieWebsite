@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
-	"movieweb/internal/models"
-	"movieweb/internal/tmdb"
+	"filmgap/internal/models"
+	"filmgap/internal/tmdb"
 )
 
 // seedDataIfEmpty checks if the media table is empty and populates it with TMDB data
@@ -24,9 +24,9 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 		// 1. Seed Users
 		hashedPassword, _ := bcrypt.GenerateFromPassword([]byte("password"), 12)
 		users := []models.User{
-			{Username: "adamd", Email: "adam@example.com", Avatar: "/static/img/avatar1.png", ReputationScore: 50, Role: "admin"},
-			{Username: "sarah_k", Email: "sarah@example.com", Avatar: "/static/img/avatar2.png", ReputationScore: 10, Role: "user"},
-			{Username: "moviebuff99", Email: "buff99@example.com", Avatar: "/static/img/avatar3.png", ReputationScore: 100, Role: "moderator"},
+			{Username: "adamd", Email: "adam@example.com", Avatar: "/static/img/default_avatar.webp", ReputationScore: 50, Role: "admin"},
+			{Username: "sarah_k", Email: "sarah@example.com", Avatar: "/static/img/default_avatar.webp", ReputationScore: 10, Role: "user"},
+			{Username: "moviebuff99", Email: "buff99@example.com", Avatar: "/static/img/default_avatar.webp", ReputationScore: 100, Role: "moderator"},
 		}
 
 		query := "INSERT INTO users (username, email, password_hash, avatar, reputation_score, role) VALUES "
@@ -295,3 +295,4 @@ func (m *PostgresDBRepo) seedDataIfEmpty(tmdbAPIKey string) {
 		}
 	}
 }
+

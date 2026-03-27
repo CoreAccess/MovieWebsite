@@ -3,7 +3,7 @@ package metadata
 import (
 	"encoding/json"
 	"fmt"
-	"movieweb/internal/models"
+	"filmgap/internal/models"
 )
 
 // GenerateMovieJSONLD converts a models.Movie into a valid Schema.org/Movie JSON-LD string.
@@ -27,7 +27,7 @@ func GenerateMovieJSONLD(m models.Movie, baseDomain string) (string, error) {
 		payload["aggregateRating"] = map[string]interface{}{
 			"@type":       "AggregateRating",
 			"ratingValue": m.AggregateRating,
-			"bestRating":  "10", // MovieWeb scale
+			"bestRating":  "10", // filmgap scale
 		}
 	}
 	if len(m.Genres) > 0 {
@@ -87,9 +87,31 @@ func GeneratePersonJSONLD(p models.Person, baseDomain string) (string, error) {
 		"url":         fmt.Sprintf("%s/person/%s", baseDomain, p.Slug),
 		"image":       p.Image,
 		"description": p.Biography,
-		"birthDate":   p.Birthday,
+		"birthDate":   p.BirthDate,
 		"deathDate":   p.Deathday,
 		"birthPlace":  p.BirthPlace,
+	}
+
+	bytes, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+// GenerateBlogPostJSONLD converts a models.BlogPost into a valid Schema.org/BlogPosting JSON-LD string.
+func GenerateBlogPostJSONLD(p models.BlogPost, baseDomain string) (string, error) {
+	payload := map[string]interface{}{
+		"@context":      "https://schema.org",
+		"@type":         "BlogPosting",
+		"headline":      p.Title,
+		"url":           fmt.Sprintf("%s/blog/%s", baseDomain, p.Slug),
+		"image":         p.Image,
+		"datePublished": p.CreatedAt.Format("2006-01-02T15:04:05Z"),
+		"author": map[string]interface{}{
+			"@type": "Person",
+			"name":  p.Author,
+		},
+		"articleBody": p.Content,
 	}
 
 	bytes, err := json.Marshal(payload)

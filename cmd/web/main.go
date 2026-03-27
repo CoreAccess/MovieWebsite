@@ -2,35 +2,35 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
-	"movieweb/internal/config"
-	"movieweb/internal/repository/dbrepo"
-	"movieweb/internal/service"
+	"filmgap/internal/config"
+	"filmgap/internal/repository/dbrepo"
+	"filmgap/internal/service"
 )
 
 func main() {
-	// Initialize loggers
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+	// Initialize slog JSON logger as per AGENTS.md requirements
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
 	// Load environment variables from .env file if it exists
 	config.LoadEnv(".env")
 
-	// Initialize the PostgreSQL database and seed it with data from TMDB if empty.
+	// Initialize the PostgreSQL database
 	tmdbKey := os.Getenv("TMDB_ACCESS_TOKEN")
 	if tmdbKey == "" {
 		tmdbKey = os.Getenv("TMDB_API_KEY")
 	}
 
 	if tmdbKey == "" {
-		errorLog.Println("TMDB API keys and Access Token not found in environment variables (TMDB_ACCESS_TOKEN or TMDB_API_KEY). Database seeding will be skipped.")
+		logger.Warn("TMDB API key not found — database seeding will be skipped",
+			"env_vars", "TMDB_ACCESS_TOKEN or TMDB_API_KEY",
+		)
 	}
-	
+
 	// PostgreSQL connection parameters
 	dbHost := os.Getenv("DB_HOST")
 	dbName := os.Getenv("DB_NAME")
@@ -41,31 +41,29 @@ func main() {
 		dbPort = "5432"
 	}
 
-	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", 
+	dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
 		dbHost, dbPort, dbUser, dbPass, dbName)
 
-	// Create the PostgreSQL repository mapping
+	// Create the PostgreSQL repository
 	pgRepo := &dbrepo.PostgresDBRepo{}
 	db, err := pgRepo.InitDB(dsn, tmdbKey)
 	if err != nil {
-		errorLog.Fatalf("Failed to initialize PostgreSQL database: %v\n", err)
+		logger.Error("failed to initialize PostgreSQL database", "error", err)
+		os.Exit(1)
 	}
 	defer db.Close()
 
-	// Create the Service layer to encapsulate business logic and Vector integration readiness
-	appService := service.NewAppService(pgRepo)
+	// Create the Service layer — encapsulates business logic and is Vector DB ready
+	appService := service.NewAppService(pgRepo, tmdbKey)
+	appService.SeedHomepageData()
 
 	templateCache, err := newTemplateCache()
 	if err != nil {
-		errorLog.Fatal(err)
+		logger.Error("failed to build template cache", "error", err)
+		os.Exit(1)
 	}
 
-	// Initialize slog logger as per AGENTS.md requirements
-	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
-
 	app := &application{
-		errorLog:      errorLog,
-		infoLog:       infoLog,
 		logger:        logger,
 		templateCache: templateCache,
 		Service:       appService,
@@ -76,17 +74,18 @@ func main() {
 		port = "8080"
 	}
 
-	infoLog.Printf("Starting web server on port :%s\n", port)
+	logger.Info("starting web server", "port", port, "addr", ":"+port)
 
 	srv := &http.Server{
 		Addr:         ":" + port,
-		ErrorLog:     errorLog,
 		Handler:      app.routes(),
 		IdleTimeout:  time.Minute,
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
 
-	err = srv.ListenAndServe()
-	errorLog.Fatal(err)
+	if err := srv.ListenAndServe(); err != nil {
+		logger.Error("server stopped", "error", err)
+		os.Exit(1)
+	}
 }

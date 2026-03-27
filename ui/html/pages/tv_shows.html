@@ -1,134 +1,400 @@
 {{define "title"}}TV Show Details{{end}}
 
-{{define "head"}}
-    <style>
-        .tv-accent-bg { background-color: var(--color-primary-light); }
-        .tv-accent-text { color: var(--color-primary); }
-    </style>
-{{end}}
-
 {{define "main"}}
+<div class="ref-page">
+    <main class="ref-shell">
+        <div class="ref-grid">
+            <aside>
+                <img src="{{if .TVSeriesDetail.Series.Image}}{{.TVSeriesDetail.Series.Image}}{{else}}https://placehold.co/500x750/EEE/999?text=No+Poster{{end}}" alt="{{.TVSeriesDetail.Series.Name}}" class="ref-photo" fetchpriority="high">
 
-    <main>
-        
-        <!-- Hero TV Details -->
-        <section class="mb-5">
-            <div class="row gx-5 align-items-start">
-                
-                <!-- Poster Column -->
-                <div class="col-lg-3 col-md-4 mb-4 mb-md-0 position-relative">
-                    <div class="media-poster-container shadow-lg" style="aspect-ratio: 2/3; border-radius: 4px;">
-                        <img src="{{.TVSeriesDetail.Series.Image}}" alt="{{.TVSeriesDetail.Series.Name}}" class="w-100 h-100 object-fit-cover">
-                    </div>
-                    
-                    <div class="d-flex flex-wrap gap-2 mt-4">
-                        <form action="/watchlist/toggle" method="POST" class="d-inline">
-                            <input type="hidden" name="csrf_token" value="{{$.CSRFToken}}">
-                            <input type="hidden" name="media_type" value="tv_series">
-                            <input type="hidden" name="media_id" value="{{.TVSeriesDetail.Series.ID}}">
-                            <button type="submit" class="btn btn-primary-accent rounded-1 fw-bold shadow-sm px-4">
-                                <i class="bi bi-bookmark-plus me-2"></i> Watchlist
-                            </button>
-                        </form>
-                        <button class="btn btn-outline-light rounded-1 fw-bold px-4" disabled><i class="bi bi-star me-2"></i> Rate</button>
-                        <button class="btn btn-outline-light rounded-1 fw-bold px-3" disabled><i class="bi bi-share"></i></button>
-                    </div>
+                <div class="ref-action-stack">
+                    <form action="/watchlist/toggle" method="POST" class="watchlist-form">
+                        <input type="hidden" name="csrf_token" value="{{.CSRFToken}}">
+                        <input type="hidden" name="media_type" value="TVSeries">
+                        <input type="hidden" name="media_id" value="{{.TVSeriesDetail.Series.ID}}">
+                        <button type="submit" class="btn ref-btn-primary w-100 fw-semibold">
+                            {{if index .WatchlistMap .TVSeriesDetail.Series.ID}}
+                                <i class="bi bi-bookmark-check-fill me-2"></i>On Watchlist
+                            {{else}}
+                                <i class="bi bi-bookmark-plus me-2"></i>Add To Watchlist
+                            {{end}}
+                        </button>
+                    </form>
+                    <button class="btn ref-btn-muted w-100 fw-semibold"
+                            data-bs-toggle="modal"
+                            data-bs-target="#interactionModal"
+                            data-media-id="{{.TVSeriesDetail.Series.ID}}"
+                            data-media-type="TVSeries"
+                            data-media-name="{{.TVSeriesDetail.Series.Name}}">
+                        <i class="bi bi-pencil-square me-2"></i>Rate Or Review
+                    </button>
                 </div>
 
-                <!-- Info Column -->
-                <div class="col-lg-9 col-md-8">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between mb-3 border-bottom border-subtle pb-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <h1 class="display-5 fw-black text-dark mb-0 me-3" style="letter-spacing: -1px;">{{.TVSeriesDetail.Series.Name}}</h1>
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Quick Facts</h2>
+                    <dl class="ref-facts">
+                        <div>
+                            <dt>Start Date</dt>
+                            <dd>{{if .TVSeriesDetail.Series.StartDate}}{{formatDate .TVSeriesDetail.Series.StartDate}}{{else}}Unknown{{end}}</dd>
                         </div>
-                        <div class="d-flex align-items-center gap-4 mt-3 mt-md-0">
-                            <!-- Rating -->
-                            <div class="text-center">
-                                <div class="text-muted text-uppercase small fw-bold mb-1" style="font-size: 0.7rem; letter-spacing: 1px;">Rating</div>
-                                <div class="d-flex align-items-center justify-content-center">
-                                    <i class="bi bi-star-fill text-warning fs-4 me-2"></i>
-                                    <span class="fs-4 fw-bold text-dark">{{printf "%.1f" .TVSeriesDetail.Series.AggregateRating}}</span><span class="text-muted small">/10</span>
+                        <div>
+                            <dt>Status</dt>
+                            <dd>{{if .TVSeriesDetail.Series.EndDate}}Ended{{else}}Ongoing{{end}}</dd>
+                        </div>
+                        <div>
+                            <dt>Seasons</dt>
+                            <dd>{{.TVSeriesDetail.Series.NumberOfSeasons}}</dd>
+                        </div>
+                        <div>
+                            <dt>Episodes</dt>
+                            <dd>{{.TVSeriesDetail.Series.NumberOfEpisodes}}</dd>
+                        </div>
+                        <div>
+                            <dt>Genres</dt>
+                            <dd>
+                                {{range $index, $genre := .TVSeriesDetail.Genres}}
+                                    {{if $index}}, {{end}}{{$genre.Name}}
+                                {{else}}
+                                    Unclassified
+                                {{end}}
+                            </dd>
+                        </div>
+                    </dl>
+                </section>
+
+                <section class="ref-box">
+                    <h2 class="ref-box-title">Creators & Cast</h2>
+                    <div class="ref-box-list">
+                        {{range $index, $director := .TVSeriesDetail.Directors}}
+                            {{if lt $index 2}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $director.Image}}{{$director.Image}}{{else}}https://placehold.co/80x80/EEE/999?text=Photo{{end}}" alt="{{$director.Name}}" class="ref-box-avatar" loading="lazy">
+                                <div>
+                                    <a href="/people/{{$director.ID}}/{{$director.Slug}}" class="ref-box-link">{{$director.Name}}</a>
+                                    <div class="ref-note">Creator / Producer</div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-
-                    <!-- Metadata -->
-                    <div class="d-flex flex-wrap gap-2 mb-4 align-items-center text-muted small fw-medium">
-                        <span class="badge bg-dark text-white rounded-1 px-2 py-1">{{if .TVSeriesDetail.Series.ContentRating}}{{.TVSeriesDetail.Series.ContentRating}}{{else}}TV-PG{{end}}</span>
-                        <span class="d-flex align-items-center"><i class="bi bi-calendar3 me-1"></i> {{.TVSeriesDetail.Series.StartDate}} - {{if .TVSeriesDetail.Series.EndDate}}{{.TVSeriesDetail.Series.EndDate}}{{else}}Present{{end}}</span>
-                        <span>•</span>
-                        <span>{{.TVSeriesDetail.Series.NumberOfSeasons}} Season(s)</span>
-                    </div>
-
-                    <!-- Creators -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-12">
-                            <span class="text-muted small fw-medium d-block">Creators & Producers</span>
-                            {{range $index, $director := .TVSeriesDetail.Directors}}
-                                {{if $index}}, {{end}}
-                                <a href="/people/{{$director.ID}}/{{$director.Slug}}" class="fw-bold text-primary-accent text-decoration-none hover-dark">{{$director.Name}}</a>
-                            {{else}}
-                                <span class="text-muted small">Not Available</span>
                             {{end}}
-                        </div>
+                        {{end}}
+                        {{range $index, $cast := .TVSeriesDetail.Cast}}
+                            {{if lt $index 3}}
+                            <div class="ref-box-list-item">
+                                <img src="{{if $cast.Person.Image}}{{$cast.Person.Image}}{{else}}https://placehold.co/80x80/EEE/999?text=Photo{{end}}" alt="{{$cast.Person.Name}}" class="ref-box-avatar" loading="lazy">
+                                <div>
+                                    <a href="/people/{{$cast.Person.ID}}/{{$cast.Person.Slug}}" class="ref-box-link">{{$cast.Person.Name}}</a>
+                                    <div class="ref-note">{{if $cast.Character.Name}}{{$cast.Character.Name}}{{else}}Cast{{end}}</div>
+                                </div>
+                            </div>
+                            {{end}}
+                        {{end}}
                     </div>
+                </section>
 
-                    <!-- Production & Details -->
-                    <div class="row g-3 mb-4">
-                        <div class="col-6 col-md-6">
-                            <span class="text-muted small fw-medium d-block">Original Language</span>
-                            <span class="fw-bold text-dark">{{if .TVSeriesDetail.Series.LanguageCode}}{{.TVSeriesDetail.Series.LanguageCode}}{{else}}en{{end}}</span>
+                <section class="ref-box">
+                    <h2 class="ref-box-title">FilmGap Stats</h2>
+                    <dl class="ref-facts">
+                        <div>
+                            <dt>Rating</dt>
+                            <dd>{{printf "%.1f" .TVSeriesDetail.Series.AggregateRating}}/10</dd>
                         </div>
-                    </div>
+                        <div>
+                            <dt>Reviews</dt>
+                            <dd>{{.TVSeriesDetail.Series.ReviewCount}}</dd>
+                        </div>
+                        <div>
+                            <dt>Rating Count</dt>
+                            <dd>{{.TVSeriesDetail.Series.RatingCount}}</dd>
+                        </div>
+                    </dl>
+                </section>
+            </aside>
 
-                    <!-- Synopsis -->
-                    <h5 class="fw-bold text-dark mb-2">Overview</h5>
-                    <p class="text-body mb-4" style="font-size: 1.05rem; line-height: 1.6;">
-                        {{.TVSeriesDetail.Series.Description}}
+            <section>
+                <header class="ref-main-header">
+                    <p class="ref-kicker">TV Series</p>
+                    <h1 class="ref-title">{{.TVSeriesDetail.Series.Name}}</h1>
+                    <p class="ref-subtitle">
+                        {{if .TVSeriesDetail.Series.Tagline}}
+                            {{.TVSeriesDetail.Series.Tagline}}
+                        {{else if .TVSeriesDetail.Series.Subtitle}}
+                            {{.TVSeriesDetail.Series.Subtitle}}
+                        {{else if .TVSeriesDetail.Series.Description}}
+                            {{truncateWords .TVSeriesDetail.Series.Description 28}}
+                        {{else}}
+                            FilmGap profile built from the television metadata stored in our database.
+                        {{end}}
                     </p>
+                    <div class="ref-header-meta">
+                        <span class="ref-header-meta-item"><strong>{{printf "%.1f" .TVSeriesDetail.Series.AggregateRating}}/10</strong> rating</span>
+                        <span class="ref-header-meta-item">{{if .TVSeriesDetail.Series.StartDate}}{{yearFromDate .TVSeriesDetail.Series.StartDate}}{{else}}Upcoming{{end}}</span>
+                        <span class="ref-header-meta-item">{{.TVSeriesDetail.Series.NumberOfSeasons}} seasons</span>
+                        <span class="ref-header-meta-item">{{.TVSeriesDetail.Series.NumberOfEpisodes}} episodes</span>
+                        <span class="ref-header-meta-item">{{if .TVSeriesDetail.Series.EndDate}}Ended{{else}}Ongoing{{end}}</span>
+                        {{range $index, $genre := .TVSeriesDetail.Genres}}{{if lt $index 3}}<span class="ref-header-meta-item">{{$genre.Name}}</span>{{end}}{{end}}
+                    </div>
+                </header>
 
-                    <!-- Seasons & Episodes -->
-                    <h5 class="fw-bold text-dark mb-3 mt-4">Episodes</h5>
-                    <!-- Bootstrap Accordion for Seasons -->
-                    <div class="accordion mb-5" id="seasonsAccordion">
-                        <div class="accordion-item border border-subtle rounded-1 mb-2 overflow-hidden shadow-sm">
-                            <h2 class="accordion-header" id="headingSeason1">
-                                <button class="accordion-button bg-light fw-bold text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSeason1" aria-expanded="true" aria-controls="collapseSeason1">
-                                    All Episodes
-                                </button>
-                            </h2>
-                            <div id="collapseSeason1" class="accordion-collapse collapse show" aria-labelledby="headingSeason1" data-bs-parent="#seasonsAccordion">
-                                <div class="accordion-body p-0">
-                                    
-                                    {{range .TVSeriesDetail.Episodes}}
-                                    <!-- Episode -->
-                                    <div class="d-flex p-3 border-bottom border-subtle hover-bg-light transition-fast">
-                                        <div class="me-3">
-                                            <img src="{{if .Image}}{{.Image}}{{else}}https://placehold.co/200x112/0d6efd/FFFFFF?text=Ep+{{.EpisodeNumber}}{{end}}" alt="Episode {{.EpisodeNumber}}" class="rounded-1" style="width: 120px; height: 68px; object-fit: cover;">
+                <ul class="nav nav-pills ref-tabs" id="tvTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tv-overview-tab" data-bs-toggle="pill" data-bs-target="#tv-overview" type="button" role="tab" aria-selected="true">Overview</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tv-watch-tab" data-bs-toggle="pill" data-bs-target="#tv-watch" type="button" role="tab" aria-selected="false">Watch</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tv-episodes-tab" data-bs-toggle="pill" data-bs-target="#tv-episodes" type="button" role="tab" aria-selected="false">Episodes</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tv-cast-tab" data-bs-toggle="pill" data-bs-target="#tv-cast" type="button" role="tab" aria-selected="false">Cast</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tv-details-tab" data-bs-toggle="pill" data-bs-target="#tv-details" type="button" role="tab" aria-selected="false">Details</button>
+                    </li>
+                </ul>
+
+                <div class="tab-content ref-tab-content" aria-live="polite">
+                    <div class="tab-pane fade show active" id="tv-overview" role="tabpanel" aria-labelledby="tv-overview-tab">
+                        <section class="ref-panel ref-panel--flush">
+                            <div class="ref-overview-grid">
+                                <div class="ref-overview-media">
+                                    <img src="{{if .TVSeriesDetail.Series.Image}}{{.TVSeriesDetail.Series.Image}}{{else}}https://placehold.co/720x405/EEE/999?text=Poster{{end}}" alt="{{.TVSeriesDetail.Series.Name}}" loading="lazy">
+                                </div>
+                                <div class="ref-overview-aside">
+                                    {{if .TVSeriesDetail.Series.Tagline}}<p class="ref-lead">{{.TVSeriesDetail.Series.Tagline}}</p>{{end}}
+                                    <p class="ref-copy">{{if .TVSeriesDetail.Series.Description}}{{truncateWords .TVSeriesDetail.Series.Description 72}}{{else}}No series overview is currently stored.{{end}}</p>
+
+                                    <div class="ref-stat-grid">
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Rating</span>
+                                            <span class="ref-stat-value">{{printf "%.1f" .TVSeriesDetail.Series.AggregateRating}}</span>
                                         </div>
-                                        <div>
-                                            <h6 class="fw-bold mb-1"><a href="#" class="text-dark text-decoration-none hover-primary">{{.EpisodeNumber}}. {{.Name}}</a></h6>
-                                            <div class="d-flex align-items-center mb-2 small text-muted gap-2">
-                                                <span>{{.DatePublished}}</span>
-                                                <span>•</span>
-                                                <span>{{.Duration}}m</span>
-                                            </div>
-                                            <p class="small text-body mb-0">{{.Description}}</p>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Reviews</span>
+                                            <span class="ref-stat-value">{{.TVSeriesDetail.Series.ReviewCount}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Seasons</span>
+                                            <span class="ref-stat-value">{{.TVSeriesDetail.Series.NumberOfSeasons}}</span>
+                                        </div>
+                                        <div class="ref-stat-card">
+                                            <span class="ref-stat-label">Episodes</span>
+                                            <span class="ref-stat-value">{{.TVSeriesDetail.Series.NumberOfEpisodes}}</span>
                                         </div>
                                     </div>
-                                    {{else}}
-                                    <div class="p-3 text-muted small">No episodes found.</div>
-                                    {{end}}
 
+                                    <div class="ref-fact-pairs">
+                                        <div>
+                                            <span class="ref-fact-label">Creators</span>
+                                            <span class="ref-fact-value">{{range $index, $director := .TVSeriesDetail.Directors}}{{if $index}}, {{end}}{{$director.Name}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">First Air Date</span>
+                                            <span class="ref-fact-value">{{if .TVSeriesDetail.Series.StartDate}}{{formatDate .TVSeriesDetail.Series.StartDate}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Status</span>
+                                            <span class="ref-fact-value">{{if .TVSeriesDetail.Series.EndDate}}Ended{{else}}Ongoing{{end}}</span>
+                                        </div>
+                                        <div>
+                                            <span class="ref-fact-label">Language</span>
+                                            <span class="ref-fact-value">{{if .TVSeriesDetail.Series.LanguageCode}}{{.TVSeriesDetail.Series.LanguageCode}}{{else}}Unknown{{end}}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Episode Guide</h2>
+                            {{if .TVSeriesDetail.SeasonGroups}}
+                            <div class="ref-season-strip">
+                                {{range .TVSeriesDetail.SeasonGroups}}
+                                <span class="ref-season-pill">Season {{.SeasonNumber}} ({{.EpisodeCount}})</span>
+                                {{end}}
+                            </div>
+
+                            {{range $seasonIndex, $season := .TVSeriesDetail.SeasonGroups}}
+                                {{if lt $seasonIndex 2}}
+                                <div class="ref-season-preview">
+                                    <h3 class="ref-season-title">Season {{$season.SeasonNumber}}</h3>
+                                    <div class="ref-credit-list">
+                                        {{range $episodeIndex, $episode := $season.Episodes}}
+                                            {{if lt $episodeIndex 3}}
+                                            <div class="ref-credit-row">
+                                                <div class="ref-credit-year">E{{$episode.EpisodeNumber}}</div>
+                                                <div>
+                                                    <span class="ref-credit-name">{{$episode.Name}}</span>
+                                                    <span class="ref-credit-role">{{if $episode.DatePublished}}{{formatDate $episode.DatePublished}}{{else}}Date TBA{{end}}{{if $episode.Duration}} | {{$episode.Duration}}m{{end}}</span>
+                                                </div>
+                                            </div>
+                                            {{end}}
+                                        {{end}}
+                                    </div>
+                                </div>
+                                {{end}}
+                            {{end}}
+                            {{else}}
+                            <p class="ref-copy">Episode records for this series are not available yet.</p>
+                            {{end}}
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Main Cast</h2>
+                            <div class="ref-card-row">
+                                {{range $index, $cast := .TVSeriesDetail.Cast}}
+                                    {{if lt $index 5}}
+                                    <a href="/people/{{$cast.Person.ID}}/{{$cast.Person.Slug}}" class="ref-card">
+                                        <div class="ref-card-thumb ref-card-thumb--person"><img src="{{if $cast.Person.Image}}{{$cast.Person.Image}}{{else}}https://placehold.co/300x400/EEE/999?text=Photo{{end}}" alt="{{$cast.Person.Name}}" loading="lazy"></div>
+                                        <span class="ref-card-title">{{$cast.Person.Name}}</span>
+                                        <span class="ref-card-meta">{{if $cast.Character.Name}}{{$cast.Character.Name}}{{else}}Cast{{end}}</span>
+                                    </a>
+                                    {{end}}
+                                {{end}}
+                            </div>
+                        </section>
+
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Series Details</h2>
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Creators</div>
+                                    <div><span class="ref-credit-role">{{range $index, $director := .TVSeriesDetail.Directors}}{{if $index}}, {{end}}{{$director.Name}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Content Rating</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.ContentRating}}{{.TVSeriesDetail.Series.ContentRating}}{{else}}Unrated{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Genres</div>
+                                    <div><span class="ref-credit-role">{{range $index, $genre := .TVSeriesDetail.Genres}}{{if $index}}, {{end}}{{$genre.Name}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Language</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.LanguageCode}}{{.TVSeriesDetail.Series.LanguageCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                            </div>
+                        </section>
                     </div>
-            </div>
-        </section>
 
+                    <div class="tab-pane fade" id="tv-watch" role="tabpanel" aria-labelledby="tv-watch-tab">
+                        <section class="ref-panel">
+                            <h2 class="ref-panel-title">Where To Watch</h2>
+                            {{if .WatchProviderGroups}}
+                                {{range .WatchProviderGroups}}
+                                <section class="ref-panel">
+                                    <h2 class="ref-panel-title">{{.Label}}</h2>
+                                    <div class="ref-provider-grid">
+                                        {{range .Providers}}
+                                        <a href="{{.DeepLinkURL}}" target="_blank" rel="noopener noreferrer nofollow" class="ref-provider-card">
+                                            {{if .LogoURL}}
+                                            <img src="{{.LogoURL}}" alt="{{.ProviderName}} logo" class="ref-provider-logo" loading="lazy">
+                                            {{else}}
+                                            <div class="ref-provider-logo d-flex align-items-center justify-content-center">TV</div>
+                                            {{end}}
+                                            <div>
+                                                <span class="ref-provider-name">{{.ProviderName}}</span>
+                                                <span class="ref-provider-meta">Open service details</span>
+                                            </div>
+                                        </a>
+                                        {{end}}
+                                    </div>
+                                </section>
+                                {{end}}
+                            {{else}}
+                                <p class="ref-copy">We do not have provider data for this series yet.</p>
+                            {{end}}
+                        </section>
+                    </div>
 
+                    <div class="tab-pane fade" id="tv-episodes" role="tabpanel" aria-labelledby="tv-episodes-tab">
+                        {{if .TVSeriesDetail.SeasonGroups}}
+                            {{range .TVSeriesDetail.SeasonGroups}}
+                            <section class="ref-panel">
+                                <h2 class="ref-panel-title">Season {{.SeasonNumber}}</h2>
+                                <p class="ref-note mb-3">{{.EpisodeCount}} episodes</p>
+                                <div class="ref-credit-list">
+                                    {{range .Episodes}}
+                                    <div class="ref-credit-row">
+                                        <div class="ref-credit-year">E{{.EpisodeNumber}}</div>
+                                        <div>
+                                            <span class="ref-credit-name">{{.Name}}</span>
+                                            <span class="ref-credit-role">{{if .DatePublished}}{{formatDate .DatePublished}}{{else}}Date TBA{{end}}{{if .Duration}} | {{.Duration}}m{{end}}</span>
+                                        </div>
+                                    </div>
+                                    {{end}}
+                                </div>
+                            </section>
+                            {{end}}
+                        {{else}}
+                            <section class="ref-panel">
+                                <p class="ref-copy">Episode records for this series are not available yet.</p>
+                            </section>
+                        {{end}}
+                    </div>
+
+                    <div class="tab-pane fade" id="tv-cast" role="tabpanel" aria-labelledby="tv-cast-tab">
+                        <section class="ref-panel">
+                            <div class="ref-card-row">
+                                {{range .TVSeriesDetail.Cast}}
+                                <a href="/people/{{.Person.ID}}/{{.Person.Slug}}" class="ref-card">
+                                    <div class="ref-card-thumb ref-card-thumb--person"><img src="{{if .Person.Image}}{{.Person.Image}}{{else}}https://placehold.co/300x400/EEE/999?text=Photo{{end}}" alt="{{.Person.Name}}" loading="lazy"></div>
+                                    <span class="ref-card-title">{{.Person.Name}}</span>
+                                    <span class="ref-card-meta">{{if .Character.Name}}{{.Character.Name}}{{else}}Cast{{end}}</span>
+                                </a>
+                                {{end}}
+                            </div>
+                        </section>
+                    </div>
+
+                    <div class="tab-pane fade" id="tv-details" role="tabpanel" aria-labelledby="tv-details-tab">
+                        <section class="ref-panel">
+                            <div class="ref-credit-list">
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Start Date</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.StartDate}}{{formatDate .TVSeriesDetail.Series.StartDate}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">End Date</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.EndDate}}{{formatDate .TVSeriesDetail.Series.EndDate}}{{else}}Still running{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Content Rating</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.ContentRating}}{{.TVSeriesDetail.Series.ContentRating}}{{else}}Unrated{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Language</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.LanguageCode}}{{.TVSeriesDetail.Series.LanguageCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Country</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.CountryCode}}{{.TVSeriesDetail.Series.CountryCode}}{{else}}Unknown{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Genres</div>
+                                    <div><span class="ref-credit-role">{{range $index, $genre := .TVSeriesDetail.Genres}}{{if $index}}, {{end}}{{$genre.Name}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Tagline</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.Tagline}}{{.TVSeriesDetail.Series.Tagline}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Subtitle</div>
+                                    <div><span class="ref-credit-role">{{if .TVSeriesDetail.Series.Subtitle}}{{.TVSeriesDetail.Series.Subtitle}}{{else}}Not available{{end}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Seasons</div>
+                                    <div><span class="ref-credit-role">{{.TVSeriesDetail.Series.NumberOfSeasons}}</span></div>
+                                </div>
+                                <div class="ref-credit-row">
+                                    <div class="ref-credit-year">Episodes</div>
+                                    <div><span class="ref-credit-role">{{.TVSeriesDetail.Series.NumberOfEpisodes}}</span></div>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </section>
+        </div>
     </main>
-
+</div>
 {{end}}
